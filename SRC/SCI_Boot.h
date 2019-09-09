@@ -10,7 +10,6 @@
 #ifndef _SCI_BOOT_H
 #define _SCI_BOOT_H
 
-#include "DSP280x_Device.h"
 
 inline void SCIA_Init(void)
 {

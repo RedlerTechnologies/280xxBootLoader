@@ -47,6 +47,8 @@
 #include "DSP28x_Project.h"
 #include "descriptor.h"
 #include "boot.h"
+#include "SCI_Boot.h"
+#include "board.h"
 
 extern Uint16 sectorMask;
 
@@ -75,11 +77,13 @@ Uint32 main(void)
     IFR=0;
     PieCtrlRegs.PIEACK.all = 0;
 	DisableDog();
+	gpioInit();
 	IntOsc1Sel();
 	InitPll(DSP28_PLLCR,DSP28_DIVSEL);
 
 	/* Copy data to RAM */
 	memCopy((Uint16 *)&RamfuncsLoadStart,(Uint16 *)&RamfuncsLoadEnd,(Uint16 *)&RamfuncsRunStart);
+
 
 	InitPieCtrl();
 	InitPieVectTable();
@@ -114,19 +118,16 @@ Uint32 main(void)
 
 
 
-
-
 #ifdef RUN_FROM_RAM
 #pragma CODE_SECTION(cpu_timer0_isr, "ramfuncs");
 #endif
 __interrupt void cpu_timer0_isr(void)
 {
    CpuTimer0.InterruptCount++;
-   if (CpuTimer0.InterruptCount>1000)
+   if (CpuTimer0.InterruptCount>2000) //2 SEC TIMOUT
    {
 	   callBootLoader();
    }
    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 
 }
-

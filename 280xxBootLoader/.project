@@ -61,6 +61,16 @@
 			<locationURI>PARENT-1-PROJECT_LOC/SRC/Shared_Boot.c</locationURI>
 		</link>
 		<link>
+			<name>board.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/SRC/board.c</locationURI>
+		</link>
+		<link>
+			<name>board.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/SRC/board.h</locationURI>
+		</link>
+		<link>
 			<name>descriptor.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/SRC/descriptor.c</locationURI>
