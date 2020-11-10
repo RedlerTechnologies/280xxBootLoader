@@ -26,6 +26,23 @@
 #include "Flash2806x_API_Library.h"
 #endif
 
+#ifdef SCI_PINS_28_29
+#define UART_REG SciaRegs
+#endif
+
+#ifdef SCI_PINS_7_12
+#define UART_REG SciaRegs
+#endif
+
+#ifdef SCI_PINS_40_41
+#define UART_REG ScibRegs
+#endif
+
+
+#ifndef UART_REG
+#error SCI_PINS_XX_XX not defined in progect properties - > predefines
+#endif
+
 //Length of the programming buffer
 #define PROG_BUFFER_LENGTH 0x400
 

@@ -21,12 +21,16 @@
 //###########################################################################
 
 #include "Boot.h"
-
+#include "stdint.h"
 
 
 
 // Private functions
-inline void SCIA_Init(void);
+#ifdef BAUD_SET
+inline SCI_Init(volatile struct SCI_REGS *regs,uint32_t baudRate);
+#else
+inline void SCI_Init(void);
+#endif
 inline void SCIA_AutobaudLock(void);
 Uint16 SCIA_GetWordData(void);
 Uint16 SCIA_GetOnlyWordData(void);
@@ -61,7 +65,17 @@ Uint32 SCI_Boot()
   // GetOnlyWordData = SCIA_GetWordData;
    GetOnlyWordData = SCIA_GetOnlyWordData;
 
-   SCIA_Init();
+#ifdef BAUD_SET
+   SCI_Init(&UART_REG, 230400);
+   for(;;)
+   {
+       if (UART_REG.SCICTL2.bit.TXRDY)
+           UART_REG.SCITXBUF=0x41;
+       timoutReset();
+   }
+#else
+   SCI_Init();
+#endif
    SCIA_AutobaudLock();
    checksum = 0;
    timoutReset();
@@ -88,46 +102,31 @@ Uint32 SCI_Boot()
 #ifdef RUN_FROM_RAM
 #pragma CODE_SECTION(SCI_Boot, "ramfuncs");
 #endif
-inline void SCIA_Init()
+
+
+inline void SCI_Init()
 {
+
     // Enable the SCI-A clocks
-    EALLOW;
-    SysCtrlRegs.PCLKCR0.bit.SCIAENCLK=1;
-    SysCtrlRegs.LOSPCP.all = 0x0002;
-    SciaRegs.SCIFFTX.all=0x8000;
-    // 1 stop bit, No parity, 8-bit character
-    // No loopback
-    SciaRegs.SCICCR.all = 0x0007;
-    // Enable TX, RX, Use internal SCICLK
-    SciaRegs.SCICTL1.all = 0x0003;
-    // Disable RxErr, Sleep, TX Wake,
-    // Disable Rx Interrupt, Tx Interrupt
-    SciaRegs.SCICTL2.all = 0x0000;
-    // Relinquish SCI-A from reset
-    SciaRegs.SCICTL1.all = 0x0023;
-#ifdef SCI_PINS_7_12
-    // Enable pull-ups on SCI-A pins
-    GpioCtrlRegs.GPAPUD.bit.GPIO7 = 0;
-	GpioCtrlRegs.GPAPUD.bit.GPIO12 = 0;
-	// Enable the SCI-A pins
-    GpioCtrlRegs.GPAMUX1.bit.GPIO7= 2; //RX
-    GpioCtrlRegs.GPAMUX1.bit.GPIO12 = 2; //TX
-    // Input qual for SCI-A RX is asynch
-    GpioCtrlRegs.GPAQSEL1.bit.GPIO7 = 3;
-#else //28,29
-    // Enable pull-ups on SCI-A pins
-    // GpioCtrlRegs.GPAPUD.bit.GPIO28 = 0;
-    // GpioCtrlRegs.GPAPUD.bit.GPIO29 = 0;
-    GpioCtrlRegs.GPAPUD.all &= 0xCFFFFFFF;
-    // Enable the SCI-A pins
-    // GpioCtrlRegs.GPAMUX2.bit.GPIO28 = 1;
-    // GpioCtrlRegs.GPAMUX2.bit.GPIO29 = 1;
-    GpioCtrlRegs.GPAMUX2.all |= 0x05000000;
-    // Input qual for SCI-A RX is asynch
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO28 = 3;
-#endif
-    EDIS;
-    return;
+        EALLOW;
+        SysCtrlRegs.PCLKCR0.bit.SCIAENCLK=1;
+        #ifdef F2806x_PRE_DEF
+        SysCtrlRegs.PCLKCR0.bit.SCIBENCLK=1;
+        #endif
+        SysCtrlRegs.LOSPCP.all = 0x0002;
+        UART_REG.SCIFFTX.all=0x8000;
+        // 1 stop bit, No parity, 8-bit character
+        // No loopback
+        UART_REG.SCICCR.all = 0x0007;
+        // Enable TX, RX, Use internal SCICLK
+        UART_REG.SCICTL1.all = 0x0003;
+        // Disable RxErr, Sleep, TX Wake,
+        // Diable Rx Interrupt, Tx Interrupt
+        UART_REG.SCICTL2.all = 0x0000;
+        // Relinquish SCI-A from reset
+        UART_REG.SCICTL1.all = 0x0023;
+
+        EDIS;
 }
 
 //#################################################
@@ -144,24 +143,28 @@ inline void SCIA_Init()
 
 inline void SCIA_AutobaudLock()
 {
+
     Uint16 byteData;
 
     // Must prime baud register with >= 1
-    SciaRegs.SCILBAUD = 1;
+    UART_REG.SCIHBAUD = 0;
+    UART_REG.SCILBAUD = 1;
     // Prepare for autobaud detection
     // Set the CDC bit to enable autobaud detection
     // and clear the ABD bit
-    SciaRegs.SCIFFCT.bit.CDC = 1;
-    SciaRegs.SCIFFCT.bit.ABDCLR = 1;
+    UART_REG.SCIFFCT.bit.CDC = 1;
+    UART_REG.SCIFFCT.bit.ABDCLR = 1;
     // Wait until we correctly read an
     // 'A' or 'a' and lock
-    while(SciaRegs.SCIFFCT.bit.ABD != 1) {}
+    while(UART_REG.SCIFFCT.bit.ABD != 1) {}
+    timoutReset();
+
     // After autobaud lock, clear the ABD and CDC bits
-    SciaRegs.SCIFFCT.bit.ABDCLR = 1;
-    SciaRegs.SCIFFCT.bit.CDC = 0;
-    while(SciaRegs.SCIRXST.bit.RXRDY != 1) { }
-    byteData = SciaRegs.SCIRXBUF.bit.RXDT;
-    SciaRegs.SCITXBUF = byteData;
+    UART_REG.SCIFFCT.bit.ABDCLR = 1;
+    UART_REG.SCIFFCT.bit.CDC = 0;
+    while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
+    byteData = UART_REG.SCIRXBUF.bit.RXDT;
+    UART_REG.SCITXBUF = byteData;
 
     return;
 }
@@ -186,14 +189,14 @@ Uint16 SCIA_GetWordData()
 	byteData = 0x0000;
 
 	// Fetch the LSB and verify back to the host
-	while(SciaRegs.SCIRXST.bit.RXRDY != 1) { }
-	wordData =  (Uint16)SciaRegs.SCIRXBUF.bit.RXDT;
-	SciaRegs.SCITXBUF = wordData;
+	while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
+	wordData =  (Uint16)UART_REG.SCIRXBUF.bit.RXDT;
+	UART_REG.SCITXBUF = wordData;
 
 	// Fetch the MSB and verify back to the host
-	while(SciaRegs.SCIRXST.bit.RXRDY != 1) { }
-	byteData =  (Uint16)SciaRegs.SCIRXBUF.bit.RXDT;
-	SciaRegs.SCITXBUF = byteData;
+	while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
+	byteData =  (Uint16)UART_REG.SCIRXBUF.bit.RXDT;
+	UART_REG.SCITXBUF = byteData;
 
 	checksum += wordData + byteData;
 
@@ -217,14 +220,14 @@ Uint16 SCIA_GetOnlyWordData()
 	byteData = 0x0000;
 
 	// Fetch the LSB and verify back to the host
-	while(SciaRegs.SCIRXST.bit.RXRDY != 1) { }
-	wordData =  (Uint16)SciaRegs.SCIRXBUF.bit.RXDT;
-	//SciaRegs.SCITXBUF = wordData;
+	while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
+	wordData =  (Uint16)UART_REG.SCIRXBUF.bit.RXDT;
+	//UART_REG.SCITXBUF = wordData;
 
 	// Fetch the MSB and verify back to the host
-	while(SciaRegs.SCIRXST.bit.RXRDY != 1) { }
-	byteData =  (Uint16)SciaRegs.SCIRXBUF.bit.RXDT;
-	//SciaRegs.SCITXBUF = byteData;
+	while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
+	byteData =  (Uint16)UART_REG.SCIRXBUF.bit.RXDT;
+	//UART_REG.SCITXBUF = byteData;
 
 	checksum += wordData + byteData;
 	// form the wordData from the MSB:LSB
@@ -233,6 +236,94 @@ Uint16 SCIA_GetOnlyWordData()
 	return wordData;
 }
 
+
+
+//#define BAUD_SET
+#ifdef BAUD_SET
+
+#define SCI_OPMODE_POLLING      0   /**< SCI polling mode operation */
+#define SCI_OPMODE_INTERRUPT    1   /**< SCI interrupt mode operation */
+
+#define SCI_STOP_1              0   /**< 1 stop bit */
+#define SCI_STOP_2              1   /**< 2 stop bits */
+
+#define SCI_CHARLEN_1           1   /**< 1 data bits */
+#define SCI_CHARLEN_2           2   /**< 2 data bits */
+#define SCI_CHARLEN_3           3   /**< 3 data bits */
+#define SCI_CHARLEN_4           4   /**< 4 data bits */
+#define SCI_CHARLEN_5           5   /**< 5 data bits */
+#define SCI_CHARLEN_6           6   /**< 6 data bits */
+#define SCI_CHARLEN_7           7   /**< 7 data bits */
+#define SCI_CHARLEN_8           8   /**< 8 data bits */
+
+#define SCI_CHARLEN(n)          (((n)-1)&0x7)   /**< create data bits config */
+#define SCI_GETCHARLEN(x)       (((x)&0x07)+1)  /**< read data bits config */
+
+#define SCI_PARITY_NONE         0x0 /**< no parity */
+#define SCI_PARITY_ODD          0x2 /**< odd parity */
+#define SCI_PARITY_EVEN         0x3 /**< even parity */
+
+#define DSP_CLOCK 90e6
+
+unsigned long lspClkRate(void)
+{
+    const unsigned int lspDivTable[8]= {1, 2, 4, 6, 8, 10, 12, 14};
+    volatile uint32_t chSC,chSc1,chSc2;
+
+    chSC=DSP_CLOCK;
+    chSc1=lspDivTable[SysCtrlRegs.LOSPCP.all];
+    chSc2=chSC/chSc1;
+    return ((unsigned long)DSP_CLOCK)/lspDivTable[SysCtrlRegs.LOSPCP.all];
+
+}
+
+void sciSetBaud(volatile struct SCI_REGS *regs, uint32_t baud)
+{
+    uint16_t brr;
+
+    brr=(uint16_t)((lspClkRate()/(baud*8UL))-1UL);
+    regs->SCIHBAUD    = (brr>>8)&0xff;
+    regs->SCILBAUD    = (brr)&0xff;
+}
+
+inline SCI_Init(volatile struct SCI_REGS *regs, uint32_t baudRate)
+{
+    // Enable the SCI-A clocks
+    EALLOW;
+    SysCtrlRegs.PCLKCR0.bit.SCIAENCLK=1;
+    #ifdef F2806x_PRE_DEF
+    SysCtrlRegs.PCLKCR0.bit.SCIBENCLK=1;
+    #endif
+
+    regs->SCICTL1.all =0x0000;  // SCI SW reset
+    //regs->SCIPRI.bit.FREE=1;    // free run
+
+    regs->SCICCR.all=0;
+    regs->SCICCR.bit.SCICHAR=SCI_CHARLEN(SCI_CHARLEN_8); //8bits
+    regs->SCICCR.bit.PARITYENA=0;
+    regs->SCICCR.bit.PARITY=SCI_PARITY_NONE;
+    regs->SCICCR.bit.STOPBITS=SCI_STOP_1;
+
+    // Disable Rx Interrupt, Tx Interrupt
+    regs->SCICTL2.all =0;
+
+    //Set baudrate
+    sciSetBaud(regs, baudRate);
+
+    /*Fifo*/
+    regs->SCIFFTX.all=0x0000;   // disable tx fifo
+    regs->SCIFFRX.all=0x0000;   // disable rx fifo
+    regs->SCIFFCT.all=0x0000;
+
+    // Relinquish SCI from Reset
+    regs->SCICTL1.all=0;
+    regs->SCICTL1.bit.RXENA=1; //Enable RX
+    regs->SCICTL1.bit.TXENA=1; //Enable TX
+    regs->SCICTL1.bit.SWRESET=1;
+
+    EDIS;
+}
+#endif
 
 // EOF-------
 

@@ -138,7 +138,15 @@ void DisableDog(void)
     SysCtrlRegs.WDCR= 0x0068;
     EDIS;
 }
+void ResetDog(void)
+{
 
+    EALLOW;
+    SysCtrlRegs.WDCR= 0x0028; //enable the watchdog with a fast timeout
+    SysCtrlRegs.WDCR= 0x0000; //write an invalid check value which should reset immediately
+    //You can put the EDIS here, but the processor will have already done a hard reset.
+    EDIS;
+}
 //---------------------------------------------------------------------------
 // Example: InitPll:
 //---------------------------------------------------------------------------

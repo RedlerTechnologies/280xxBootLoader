@@ -20,6 +20,8 @@
 #include "Boot.h"
 
 #include "descriptor.h"
+#include "SCI_Boot.h"
+
 
 #ifndef NULL
 #define NULL 0
@@ -88,8 +90,8 @@ void sectorErase(Uint16 sector)
 	{
 		 if (ReservedFn[02]&0x01) //Report sector erase status
 		 {
-		        SciaRegs.SCITXBUF = sector & 0xFF;
-		    	SciaRegs.SCITXBUF = 0x55; //failure
+		     UART_REG.SCITXBUF = sector & 0xFF;
+		     UART_REG.SCITXBUF = 0x55; //failure
 		 }
 
 		 while(1); //reset boot loader
@@ -97,8 +99,8 @@ void sectorErase(Uint16 sector)
 
     if (ReservedFn[02]&0x01) //Report sector erase status
     {
-        SciaRegs.SCITXBUF = sector & 0xFF;
-    	SciaRegs.SCITXBUF = 0x00; // success
+        UART_REG.SCITXBUF = sector & 0xFF;
+        UART_REG.SCITXBUF = 0x00; // success
     }
 }
 
@@ -242,7 +244,7 @@ void CopyData()
    }
 
 	if (!errCode)
-		callMain();
+	    ResetDog();//callMain();
 
    return;
 }
@@ -303,15 +305,15 @@ void ReadReservedFn()
 void SendCheckSum()
 {
 
- 	while(!SciaRegs.SCICTL2.bit.TXRDY)
+ 	while(!UART_REG.SCICTL2.bit.TXRDY)
 	{
 	}
-	SciaRegs.SCITXBUF = checksum & 0xFF;
+ 	UART_REG.SCITXBUF = checksum & 0xFF;
 
-	while(!SciaRegs.SCICTL2.bit.TXRDY)
+	while(!UART_REG.SCICTL2.bit.TXRDY)
 	{
 	}
-	SciaRegs.SCITXBUF = (checksum >> 8) & 0xFF;
+	UART_REG.SCITXBUF = (checksum >> 8) & 0xFF;
  	checksum = 0;
    	return;
 }

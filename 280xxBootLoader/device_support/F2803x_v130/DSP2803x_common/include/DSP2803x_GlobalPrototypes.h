@@ -101,6 +101,7 @@ extern void DSP28x_usDelay(Uint32 Count);
 #define KickDog ServiceDog     // For compatiblity with previous versions
 extern void ServiceDog(void);
 extern void DisableDog(void);
+extern void ResetDog(void);
 extern Uint16 CsmUnlock(void);
 extern void IntOsc1Sel (void);
 extern void IntOsc2Sel (void);

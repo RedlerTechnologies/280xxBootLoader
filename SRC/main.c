@@ -97,11 +97,13 @@ Uint32 main(void)
 	PieVectTable.TINT0 = &cpu_timer0_isr;
 	EDIS;    // This is needed to disable write to EALLOW protected registers
 
+    // Enable TINT0 in the PIE: Group 1 interrupt 7
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+
 	// Enable CPU INT1 which is connected to CPU-Timer 0:
 	IER |= M_INT1;
 
-	// Enable TINT0 in the PIE: Group 1 interrupt 7
-	PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+
 
 	// Enable global Interrupts and higher priority real-time debug events:
 	EINT;   // Enable Global interrupt INTM
@@ -112,6 +114,7 @@ Uint32 main(void)
 
 	EntryPoint=SCI_Boot();
 
+	//force reset
 	return EntryPoint;
 }//Returning from main calls _ExitBoot in Exit_Boot.asm.
 

@@ -34,10 +34,10 @@
 
 /* defines ---------------------------------------------------------------------------------------*/
 /***********Software Rev***************/
-#define SW_MAJOR	 00
-#define SW_MINOR	 02
-#define SW_SUBMINOR	 01
-#define SW_PATCH 	 07
+#define SW_MAJOR	 (0)
+#define SW_MINOR	 (2)
+#define SW_SUBMINOR	 (1)
+#define SW_PATCH 	 (9)
 
 #define LOADER_VER (SW_MAJOR*1000000L+SW_MINOR*10000L+SW_SUBMINOR*100L+SW_PATCH)
 /***********Software Rev***************/
