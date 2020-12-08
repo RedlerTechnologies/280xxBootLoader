@@ -53,8 +53,8 @@ PAGE 0 :
    /****FLASH C********/
 
    /****FLASH A********/
-   LOADER_DESC  : origin = 0x3F6000, length = 0x000008  /*loader descriptor*/
-   LOADER       : origin = 0x3F6008, length = 0x001F78  /*loader main program*/
+   LOADER_DESC  : origin = 0x3F6000, length = 0x000040  /*loader descriptor*/
+   LOADER       : origin = 0x3F6040, length = 0x001F40  /*loader main program*/
    BEGIN        : origin = 0x3F7FF6, length = 0x000002  /* "jump to flash" ,  for codestart function - in codeStartBrunch.asm  */
 
    /****FLASH C********/

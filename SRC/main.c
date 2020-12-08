@@ -108,6 +108,7 @@ Uint32 main(void)
 	// Enable global Interrupts and higher priority real-time debug events:
 	EINT;   // Enable Global interrupt INTM
 	ERTM;   // Enable Global realtime interrupt DBGM
+	DRTM; //enable DebugInt
 
 	CpuTimer0Regs.TCR.all = 0x4001; // Use write-only instruction to set TSS bit = 0
 

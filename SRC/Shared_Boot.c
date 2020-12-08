@@ -243,8 +243,11 @@ void CopyData()
       BlockHeader.BlockSize = (*GetOnlyWordData)();
    }
 
-	if (!errCode)
+	if (errCode)
+	    callBootLoader();
+	else
 	    ResetDog();//callMain();
+
 
    return;
 }
