@@ -19,13 +19,13 @@
 #define RAYON70         6
 #define SHRAKRAK        7
 #define SINGLE_M        8
-#define RAYON70L        9
+#define RAYON70L        9// empty
 #define STXI_M1         10
 
 #ifdef BOARD_URAYON
 #define BOARD URAYON
 #else
-#define BOARD STXI_M1
+#define BOARD RAYON70
 #endif
 
 
