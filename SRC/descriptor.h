@@ -37,7 +37,7 @@
 #define SW_MAJOR	 00
 #define SW_MINOR	 02
 #define SW_SUBMINOR	 01
-#define SW_PATCH 	 24
+#define SW_PATCH 	 25
 
 #define LOADER_VER (SW_MAJOR*1000000L+SW_MINOR*10000L+SW_SUBMINOR*100L+SW_PATCH)
 
@@ -53,10 +53,7 @@
 /***********Serial Number***************/
 #define DEF_SERIAL 0x00000000
 
-/***********Unit Numbers***************/
-#define DEF_NUM1 1
-#define DEF_NUM2 2
-#define DEF_NUM3 3
+
 
 /* macros ----------------------------------------------------------------------------------------*/
 
@@ -81,13 +78,14 @@ extern volatile const struct sLoaderInterfaceTable loaderDesc;
 struct sLoaderInterfaceTable
 {
     Uint32 version;        /* loader version */
-    Uint32 programChecksum;/* application program checksum */
+    Uint32 loaderChecksum; /* Loader program checksum */
     void (*entry)();       /* Loader entry point */
     Uint32 hw_rev;         /* hardware version */
     Uint32 serial;         /* unit serial number */
-    Uint32 unit_num1;            /* unit number1 */
-    Uint32 unit_num2;            /* unit number2 */
-    Uint32 unit_num3;            /* unit number2 */
+    Uint32 partNamber;     /* unit part number */
+    Uint32 productionDate; /* production date week year WWYYYY*/
+    Uint32 LOT;            /* LOT number */
+    Uint32 techCode;        /* technician code*/
 };
 
 

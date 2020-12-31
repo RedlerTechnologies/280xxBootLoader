@@ -138,15 +138,17 @@ void CopyData()
    if (ReservedFn[0])
 	   sectorMask=ReservedFn[0]&0x00FF;
 
-   if (ReservedFn[01]==0x005A)
-	   sectorErase(SECTORA&sectorMask);
-   sectorErase(SECTORB&sectorMask);
-   sectorErase(SECTORC&sectorMask);
-   sectorErase(SECTORD&sectorMask);
-   sectorErase(SECTORE&sectorMask);
-   sectorErase(SECTORF&sectorMask);
+   sectorErase(SECTORH&sectorMask); //Erase SW checksum first
    sectorErase(SECTORG&sectorMask);
-   sectorErase(SECTORH&sectorMask);
+   sectorErase(SECTORF&sectorMask);
+   sectorErase(SECTORE&sectorMask);
+   sectorErase(SECTORD&sectorMask);
+   sectorErase(SECTORC&sectorMask);
+   sectorErase(SECTORB&sectorMask);
+
+   if (ReservedFn[01]==0x005A)
+       sectorErase(SECTORA&sectorMask);
+
 
 
    // After Flash Erase, send the checksum to PC program.

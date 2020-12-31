@@ -24,23 +24,19 @@ extern void c_int00(void);
 
 
 
-
-
-Uint32 unit_num1;            /* unit number1 */
-Uint32 unit_num2;            /* unit number2 */
-Uint32 unit_num3;            /* unit number2 */
 /***********Loader descriptor********************/
 #pragma DATA_SECTION(loaderDesc, ".loaderDesc");
 volatile const struct sLoaderInterfaceTable loaderDesc=
 			{
-                LOADER_VER,/* loader version */
-                0xFFFFFFFF, // loader Checksum
-                /*(void (*)())*/c_int00, // /* loader entry point */
-			    HW_REV,/* hardware version */
-			    DEF_SERIAL,/* unit serial number */
-			    DEF_NUM1,/* unit number1 */
-			    DEF_NUM2,/* unit number2 */
-			    DEF_NUM3/* unit number3 */
+                LOADER_VER,                 /* loader version */
+                0xFFFFFFFF,                 /* Loader program checksum */
+                c_int00,                    /* loader entry point */
+			    HW_REV,                     /* hardware version */
+			    0x55555555,                 /* unit serial number */
+			    0x66666666,                 /* unit part number */
+			    0x77777777,                 /* production date week year WWYYYY*/
+			    0x88888888,                 /* LOT number */
+			    0x99999999                  /* technician code*/
 			};
 
 /************Main Application descriptor*****************/
