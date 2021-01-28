@@ -36,7 +36,7 @@ volatile const struct sLoaderInterfaceTable loaderDesc=
 			    0x66666666,                 /* unit part number */
 			    0x77777777,                 /* production date week year WWYYYY*/
 			    0x88888888,                 /* LOT number */
-			    0x99999999                  /* technician code*/
+			    0x9999                      /* technician code*/
 			};
 
 /************Main Application descriptor*****************/

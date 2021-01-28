@@ -37,7 +37,7 @@
 #define SW_MAJOR	 00
 #define SW_MINOR	 02
 #define SW_SUBMINOR	 01
-#define SW_PATCH 	 25
+#define SW_PATCH 	 26
 
 #define LOADER_VER (SW_MAJOR*1000000L+SW_MINOR*10000L+SW_SUBMINOR*100L+SW_PATCH)
 
@@ -74,8 +74,20 @@ extern volatile const struct sLoaderInterfaceTable loaderDesc;
 #define APPLICATIONDESC_H_
 
 
+struct sHwParameters //size 16bit x 16
+{
+    float Rsense;
+    float maxContCurrent;
+    float maxPeakCurrent;
+    float maxPeakTime;
+    float maxUartBaud;
+    float maxSsiBaud;
+    Uint32 reserved[10];
+    //float gainIb;
+    //float gainIc;
+};
 
-struct sLoaderInterfaceTable
+struct sLoaderInterfaceTable //size 16bit x 64
 {
     Uint32 version;        /* loader version */
     Uint32 loaderChecksum; /* Loader program checksum */
@@ -85,7 +97,10 @@ struct sLoaderInterfaceTable
     Uint32 partNamber;     /* unit part number */
     Uint32 productionDate; /* production date week year WWYYYY*/
     Uint32 LOT;            /* LOT number */
-    Uint32 techCode;        /* technician code*/
+    Uint16 techCode;       /* Technician code*/
+    Uint16 FactoryCode;    /* Factory code*/
+    Uint32 reserved[7];
+    struct sHwParameters hwParams;
 };
 
 
