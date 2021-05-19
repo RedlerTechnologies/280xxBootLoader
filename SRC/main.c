@@ -49,7 +49,9 @@
 #include "boot.h"
 #include "SCI_Boot.h"
 #include "board.h"
-
+#ifdef CAN
+#include "ecan.h"
+#endif
 extern Uint16 sectorMask;
 
 // Prototype statements for functions found within this file.
@@ -78,8 +80,12 @@ Uint32 main(void)
     PieCtrlRegs.PIEACK.all = 0;
 	DisableDog();
 	gpioInit();
+
 	IntOsc1Sel();
 	InitPll(DSP28_PLLCR,DSP28_DIVSEL);
+
+
+
 
 	/* Copy data to RAM */
 	memCopy((Uint16 *)&RamfuncsLoadStart,(Uint16 *)&RamfuncsLoadEnd,(Uint16 *)&RamfuncsRunStart);
@@ -87,6 +93,20 @@ Uint32 main(void)
 
 	InitPieCtrl();
 	InitPieVectTable();
+
+
+    #ifdef CAN
+
+    #define SDO_RX 0x600
+    #define SDO_TX 0x580
+    #define UNIT_ID 0
+
+    SysCtrlRegs.PCLKCR0.bit.ECANAENCLK=1;   // eCAN-A
+    InitECanA(ECANBR_1MBPS_VAL);
+    Ecan_set_tx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX, SDO_RX + UNIT_ID , 0);
+    Ecan_set_rx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX+1, SDO_TX + UNIT_ID, 0xFFFFFFFF, 0); // NODEID = 0
+
+    #endif
 
 	/*timeout*/
 	InitCpuTimers();

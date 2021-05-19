@@ -37,7 +37,7 @@
 #define SW_MAJOR	 00
 #define SW_MINOR	 02
 #define SW_SUBMINOR	 01
-#define SW_PATCH 	 26
+#define SW_PATCH 	 27
 
 #define LOADER_VER (SW_MAJOR*1000000L+SW_MINOR*10000L+SW_SUBMINOR*100L+SW_PATCH)
 
@@ -99,7 +99,8 @@ struct sLoaderInterfaceTable //size 16bit x 64
     Uint32 LOT;            /* LOT number */
     Uint16 techCode;       /* Technician code*/
     Uint16 FactoryCode;    /* Factory code*/
-    Uint32 reserved[7];
+    Uint32 systemNum[3];   /*System/Ext Numbers*/
+    Uint32 reserved[4];
     struct sHwParameters hwParams;
 };
 

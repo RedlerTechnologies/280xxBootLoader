@@ -48,13 +48,14 @@ struct HEADER {
 // GetWordData is a pointer to the function that interfaces to the peripheral.
 // Each loader assigns this pointer to it's particular GetWordData function.
 uint16fptr GetOnlyWordData;
+uint16fptr SendCheckSum;
 
 // Function prototypes
 Uint32 GetLongData();
 //void   CopyData(void);
 void ReadReservedFn(void);
 //After flash_program, send checksum to PC
-void SendCheckSum();
+void SendCheckSumSci();
 Uint16 CsmUnlock();
 
 
@@ -150,9 +151,11 @@ void CopyData()
        sectorErase(SECTORA&sectorMask);
 
 
-
+   /*Master stop sending txt file and wait for checksum*/
    // After Flash Erase, send the checksum to PC program.
    SendCheckSum();
+
+   /*MMaster send worn number 12 from txt*/
    // Get the size in words of the first block
    BlockHeader.BlockSize = (*GetOnlyWordData)();
 
@@ -190,6 +193,8 @@ void CopyData()
 		          return ;
 		      }
 		      BlockHeader.DestAddr += PROG_BUFFER_LENGTH;
+
+		      /*Master stop sending txt file and wait for checksum*/
 		      // After Flash program, send the checksum to PC program.
 		      SendCheckSum();
 	      }
@@ -212,6 +217,7 @@ void CopyData()
 	    	  __asm ("      ESTOP0");
 	          return ;
 	      }
+	      /*Master stop sending txt file and wait for checksum*/
 	      // After Flash program, send the checksum to PC program.
 	      SendCheckSum();
 	  }
@@ -307,7 +313,7 @@ void ReadReservedFn()
 #ifdef RUN_FROM_RAM
 #pragma CODE_SECTION(SendCheckSum, "ramfuncs");
 #endif
-void SendCheckSum()
+void SendCheckSumSci()
 {
 
  	while(!UART_REG.SCICTL2.bit.TXRDY)

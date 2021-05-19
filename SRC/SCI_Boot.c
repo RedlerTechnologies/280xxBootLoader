@@ -34,6 +34,8 @@ inline void SCI_Init(void);
 inline void SCIA_AutobaudLock(void);
 Uint16 SCIA_GetWordData(void);
 Uint16 SCIA_GetOnlyWordData(void);
+void SendCheckSumSci(void);
+inline void communicationLock();
 
 // External functions
 extern void CopyData(void);
@@ -42,6 +44,27 @@ extern void ReadReservedFn(void);
 
 extern unsigned int checksum;
 
+
+/*
+ * Master CAN  flow chart
+ *
+ *
+ * 1. Send loader command 0x203E[10] = 1 , (wait for echo, retry 3 times, if fail continue anyway)
+ * 2. Send CAN-Lock SDO 0x2000, Data 0xAAAA ((wait for echo, retry 3 times, Fail)
+ * 3. Send 11 words (22 bytes) from file
+ * 4. Unit erase sectors, wait for checksum (10s timeout)
+ * 5. Read and send next word from file,  this is the "Block Size" .
+ * 6. Send next words data from file up to "Block Size"
+ * 7. Unit Program sectors, wait for checksum and compare (1s timout Fail)
+ * 8. if not End of File go to step 6
+ * 9.End of File  = Success
+ *
+ * If Success: unit will reboot to operational mode.
+ * If Fail: unit will return to boot mode stage 3
+ *
+ * CAN master sends data as words, (SDO 0x2000 - 2 bytes data size).
+ *
+ */
 //#################################################
 // Uint32 SCI_Boot(void)
 //--------------------------------------------
@@ -76,15 +99,29 @@ Uint32 SCI_Boot()
 #else
    SCI_Init();
 #endif
+
+
+
+#ifdef CAN
+   communicationLock();
+#else
    SCIA_AutobaudLock();
+#endif
+
+
    checksum = 0;
    timoutReset();
    // If the KeyValue was invalid, abort the load
    // and return the flash entry point.
+
+   /*Master Send first Word in .txt file 0x08AA*/
    if (GetOnlyWordData() != 0x08AA) return FLASH_ENTRY_POINT;
 
+
+   /*master send next 8 words from .txt file*/
    ReadReservedFn();
 
+   /*master send next 2 words from .txt file*/
    EntryAddr = GetLongData();
 
    CopyData();
@@ -141,6 +178,56 @@ inline void SCI_Init()
 #pragma CODE_SECTION(SCIA_AutobaudLock, "ramfuncs");
 #endif
 
+#ifdef CAN
+inline void communicationLock()
+{
+
+    Uint16 byteData;
+
+    /*Set SCIA_AutobaudLock */
+    // Must prime baud register with >= 1
+    UART_REG.SCIHBAUD = 0;
+    UART_REG.SCILBAUD = 1;
+    // Prepare for autobaud detection
+    // Set the CDC bit to enable autobaud detection
+    // and clear the ABD bit
+    UART_REG.SCIFFCT.bit.CDC = 1;
+    UART_REG.SCIFFCT.bit.ABDCLR = 1;
+    // Wait until we correctly read an
+    // 'A' or 'a' and lock
+    for(;;)
+    {
+        if (UART_REG.SCIFFCT.bit.ABD) //add sci A/B automatic detection and fixed baud at 19200
+        {
+            // After autobaud lock, clear the ABD and CDC bits
+            UART_REG.SCIFFCT.bit.ABDCLR = 1;
+            UART_REG.SCIFFCT.bit.CDC = 0;
+            while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
+            byteData = UART_REG.SCIRXBUF.bit.RXDT;
+            UART_REG.SCITXBUF = byteData;
+
+            //set SCIA get/Send pointers
+            GetOnlyWordData = SCIA_GetOnlyWordData;
+            SendCheckSum = SendCheckSumSci;
+            break;
+        }
+        else if (ECanaRegs.CANRMP.bit.RMP1 & ECanaMboxes.MBOX1.MDL.word.HI_WORD == 0x2000){ }
+        {
+            canSendMailBox0(ECanaMboxes.MBOX1.MDL.word.LOW_WORD); //Echo
+            //set CAN get/Send pointers
+        }
+
+
+    }
+
+    timoutReset();
+
+
+
+    return;
+}
+#else
+
 inline void SCIA_AutobaudLock()
 {
 
@@ -168,7 +255,7 @@ inline void SCIA_AutobaudLock()
 
     return;
 }
-
+#endif
 //#################################################
 // Uint16 SCIA_GetWordData(void)
 //-----------------------------------------------

@@ -81,6 +81,16 @@
 			<locationURI>PARENT-1-PROJECT_LOC/SRC/descriptor.h</locationURI>
 		</link>
 		<link>
+			<name>ecan.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/SRC/ecan.c</locationURI>
+		</link>
+		<link>
+			<name>ecan.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/SRC/ecan.h</locationURI>
+		</link>
+		<link>
 			<name>flashcheck.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/SRC/flashcheck.c</locationURI>
