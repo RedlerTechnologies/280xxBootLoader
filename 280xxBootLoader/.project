@@ -103,7 +103,7 @@
 		<link>
 			<name>main.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/SRC/main.c</locationURI>
+			<location>C:/Projects/280xxBootLoader/SRC/main.c</location>
 		</link>
 	</linkedResources>
 </projectDescription>

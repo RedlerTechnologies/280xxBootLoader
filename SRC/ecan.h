@@ -244,6 +244,7 @@ Uint32 SelectCANBaudRate(long baud);
 void CanInit ();
 void canHandle();
 void CanPlot();
+void canSendMailBox0(Uint16 *data,Uint16 length);
 extern ECAN_TX_PACKET	ecan_tx_packet;
 #ifdef __cplusplus
 }

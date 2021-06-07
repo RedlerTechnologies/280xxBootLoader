@@ -90,6 +90,18 @@
 #define EIGHT_BIT_HEADER   0x08AA
 #define SIXTEEN_BIT_HEADER 0x10AA
 
+
+typedef struct sCircBuf
+{
+    Uint16 *mem;      /**< Circular buffer memory block  */
+    Uint16 *memEnd;   /**< End of circular buffer memory block  */
+    Uint16 *head;     /**< Circular buffer head pointer  */
+    Uint16 *tail;     /**< Circular buffer tail pointer  */
+    unsigned long size;    /**< Circular buffer size  */
+    unsigned long count;   /**< Circular buffer contents count  */
+    unsigned long bufFullErr;
+} CIRCBUF;
+extern int circBufInit(Uint16 *mem, unsigned long size);
 //---------------------------------------------------------------------------
 //
 typedef Uint16 (* uint16fptr)();
@@ -100,6 +112,10 @@ extern  void (*Flash_CallbackPtr) (void);
 extern  Uint32 Flash_CPUScaleFactor;
 extern  Uint16 EmuKey;
 extern  Uint16 EmuBMode;
+extern  CIRCBUF *BuffPtr;
+extern unsigned long RemainingBytes;
+extern unsigned long RemainingBytes1;
+
 #define Device_cal (void   (*)(void))0x3D7C80
 #define Get_mode   (Uint16 (*)(void))0x3D7CC0
 

@@ -35,7 +35,7 @@
 /* defines ---------------------------------------------------------------------------------------*/
 /***********Software Rev***************/
 #define SW_MAJOR	 00
-#define SW_MINOR	 02
+#define SW_MINOR	 03
 #define SW_SUBMINOR	 01
 #define SW_PATCH 	 27
 

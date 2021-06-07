@@ -22,8 +22,7 @@
 
 #include "Boot.h"
 #include "stdint.h"
-
-
+#include "ecan.h"
 
 // Private functions
 #ifdef BAUD_SET
@@ -31,10 +30,17 @@ inline SCI_Init(volatile struct SCI_REGS *regs,uint32_t baudRate);
 #else
 inline void SCI_Init(void);
 #endif
+
+#ifdef CAN
+#else
 inline void SCIA_AutobaudLock(void);
+#endif
+
+
 Uint16 SCIA_GetWordData(void);
 Uint16 SCIA_GetOnlyWordData(void);
-void SendCheckSumSci(void);
+Uint16 SendCheckSumSci(void);
+Uint16 SendCheckSumCAN(void);
 inline void communicationLock();
 
 // External functions
@@ -43,6 +49,7 @@ Uint32 GetLongData(void);
 extern void ReadReservedFn(void);
 
 extern unsigned int checksum;
+extern Uint16 toggleBit;
 
 
 /*
@@ -85,7 +92,7 @@ Uint32 SCI_Boot()
    // Assign GetWordData to the SCI-A version of the
    // function.  GetOnlyWordData is a pointer to a function.
    // This version doesn't send echo back each character.
-  // GetOnlyWordData = SCIA_GetWordData;
+   // GetOnlyWordData = SCIA_GetWordData;
    GetOnlyWordData = SCIA_GetOnlyWordData;
 
 #ifdef BAUD_SET
@@ -108,7 +115,6 @@ Uint32 SCI_Boot()
    SCIA_AutobaudLock();
 #endif
 
-
    checksum = 0;
    timoutReset();
    // If the KeyValue was invalid, abort the load
@@ -116,7 +122,6 @@ Uint32 SCI_Boot()
 
    /*Master Send first Word in .txt file 0x08AA*/
    if (GetOnlyWordData() != 0x08AA) return FLASH_ENTRY_POINT;
-
 
    /*master send next 8 words from .txt file*/
    ReadReservedFn();
@@ -128,6 +133,236 @@ Uint32 SCI_Boot()
 
    return EntryAddr;
 }
+
+
+/**
+* @fn int circBufInit(CIRCBUF *circBuf, void *mem, size_t size)
+*
+* This function initializes a circular buffer of characters.
+*
+* @author Eli Schneider
+*
+* @param circBuf pointer to circular buffer structure
+* @param mem pointer to buffer memory start
+* @param size buffer memory size
+*
+* @return 0=Success, -1=Fail.
+*
+* @date 10.01.2009
+*/
+#define NULL 0
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(circBufInit,"ramfuncs");
+#endif
+int circBufInit(Uint16 *mem, unsigned long size)
+{
+    if ((BuffPtr==NULL) || (mem==NULL) || (size==0))
+        return -1;
+    BuffPtr->mem=mem;
+    BuffPtr->size=size;
+    BuffPtr->memEnd= &(mem)[size];
+    BuffPtr->head=BuffPtr->tail=mem;
+    BuffPtr->count=0;
+    BuffPtr->bufFullErr=0;
+    return 0;
+}
+
+/**
+* @fn int circBufGet(CIRCBUF *circBuf, char *d)
+*
+* This function gets a character from the head of the circular buffer.
+*
+* @author Eli Schneider
+*
+* @param circBuf pointer to circular buffer structure
+* @param d pointer to destination character
+*
+* @return 0=Success, -1=Fail.
+*
+* @date 10.01.2009
+*/
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(circBufGet,"ramfuncs");
+#endif
+int circBufGet(Uint16 *d)
+{
+
+    if (BuffPtr->count==0)
+        return -1;
+    *d= *BuffPtr->head++;
+    if (BuffPtr->head==BuffPtr->memEnd)
+        BuffPtr->head=BuffPtr->mem;
+    BuffPtr->count--;
+    return 0;
+}
+/**
+* @fn int circBufPut(CIRCBUF *circBuf, char ch)
+*
+* This function puts a character into a circular queue.
+*
+* @author Eli Schneider
+*
+* @param circBuf pointer to circular buffer structure
+* @param ch character
+*
+* @return 0=Success, -1=Fail.
+*
+* @date 10.01.2009
+*/
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(circBufPut,"ramfuncs");
+#endif
+int circBufPut(char ch)
+{
+    if (BuffPtr->size<=BuffPtr->count)
+        return -1;
+    *BuffPtr->tail++=ch;
+    if (BuffPtr->tail==BuffPtr->memEnd)
+        BuffPtr->tail=BuffPtr->mem;
+    BuffPtr->count++;
+
+    return 0;
+}
+
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(getData,"ramfuncs");
+#endif
+Uint16 getData(void)
+{
+    Uint16 Status;
+    int i=0;
+    while((i<7)&&(RemainingBytes>0))
+    {
+        switch(i)
+        {
+            case 0:
+                Status = circBufPut(ECanaMboxes.MBOX1.MDL.byte.BYTE1);
+                break;
+            case 1:
+                Status = circBufPut(ECanaMboxes.MBOX1.MDL.byte.BYTE2);
+                break;
+            case 2:
+                Status = circBufPut(ECanaMboxes.MBOX1.MDL.byte.BYTE3);
+                break;
+            case 3:
+                Status = circBufPut(ECanaMboxes.MBOX1.MDH.byte.BYTE4);
+                break;
+            case 4:
+                Status = circBufPut(ECanaMboxes.MBOX1.MDH.byte.BYTE5);
+                break;
+            case 5:
+                Status = circBufPut(ECanaMboxes.MBOX1.MDH.byte.BYTE6);
+                break;
+            case 6:
+                Status = circBufPut(ECanaMboxes.MBOX1.MDH.byte.BYTE7);
+                break;
+
+        }
+        if (Status)
+            return Status;
+
+        i++;
+        RemainingBytes--;
+    }
+    return Status;
+
+}
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(sdoInitiateDownloadHandle,"ramfuncs");
+#endif
+
+Uint16 sdoInitiateDownloadHandle()
+{
+    Uint16 SDO_ACK[8]={0};
+    while (!ECanaRegs.CANRMP.bit.RMP1){ } //if not ready
+    if (ECanaMboxes.MBOX1.MDL.byte.BYTE0 == 0x21) //initiate download
+    {
+        RemainingBytes=0;
+        RemainingBytes1=0;
+        RemainingBytes = (unsigned long)ECanaMboxes.MBOX1.MDH.byte.BYTE4+256*((unsigned long)ECanaMboxes.MBOX1.MDH.byte.BYTE5);
+        RemainingBytes1 = (unsigned long)ECanaMboxes.MBOX1.MDH.byte.BYTE6+256*((unsigned long)ECanaMboxes.MBOX1.MDH.byte.BYTE7);
+        RemainingBytes = (RemainingBytes1 << 16) | RemainingBytes;//RemainingBytes + RemainingBytes1*1024*64;
+        EALLOW;     // EALLOW enables access to protected bits
+        ECanaRegs.CANRMP.all = 0x00000002;
+        EDIS;
+        SDO_ACK[0]= 0x60;
+        SDO_ACK[1]= 0x20;
+        canSendMailBox0(SDO_ACK,8);
+        return 0;
+    }
+    else
+      //  canSendMailBox0(SDO_ABORT,8);
+        return 1;
+}
+
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(sdoSegmentAck,"ramfuncs");
+#endif
+
+Uint16 sdoSegmentAck()
+{
+    Uint16 SDO_ACK[8]={0};
+
+    SDO_ACK[0]= 0x20;
+
+    if(toggleBit)
+        SDO_ACK[0]= 0x30;
+
+    toggleBit = ~toggleBit;
+    toggleBit &= 0x0001;
+    EALLOW;     // EALLOW enables access to protected bits
+    ECanaRegs.CANRMP.all = 0x00000002;
+    EDIS;
+    canSendMailBox0(SDO_ACK,8);
+    return 0;
+}
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(sdoSegmentGetData,"ramfuncs");
+#endif
+
+Uint16 sdoSegmentGetData()
+{
+    while (!ECanaRegs.CANRMP.bit.RMP1){ } //if not ready
+    if (((toggleBit && (ECanaMboxes.MBOX1.MDL.byte.BYTE0 == 0x10))||
+       (!toggleBit && !ECanaMboxes.MBOX1.MDL.byte.BYTE0))
+       ||(ECanaMboxes.MBOX1.MDL.byte.BYTE0 == 0x3))
+    {
+        getData();
+        return 0;
+    }
+    else
+      //  canSendMailBox0(SDO_ABORT,8);
+        return 1;
+}
+
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(getWordCanMailBox1Data,"ramfuncs");
+#endif
+
+Uint16 getWordCanMailBox1Data()
+{
+    Uint16 wordData;
+    Uint16 tempData1;
+    Uint16 tempData2;
+
+    if (!RemainingBytes)
+        sdoInitiateDownloadHandle(); //wait for new packet
+
+    if (BuffPtr->count<2)
+    {
+        sdoSegmentGetData(); //wait for new packet
+    }
+    if (BuffPtr->count<4)
+        sdoSegmentAck();
+
+    circBufGet(&tempData1);
+    circBufGet(&tempData2);
+   // wordData = ECanaMboxes.MBOX1.MDL.word.HI_WORD;
+    wordData = (tempData1|(tempData2<<8));
+
+    return wordData;
+}
+
 
 
 //#################################################
@@ -174,15 +409,16 @@ inline void SCI_Init()
 // the program will hang in this routine as there
 // is no timeout mechanism included.
 //------------------------------------------------
-#ifdef RUN_FROM_RAM
-#pragma CODE_SECTION(SCIA_AutobaudLock, "ramfuncs");
-#endif
+
 
 #ifdef CAN
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(communicationLock, "ramfuncs");
+#endif
 inline void communicationLock()
 {
-
     Uint16 byteData;
+    Uint16 TxData[8]={0};
 
     /*Set SCIA_AutobaudLock */
     // Must prime baud register with >= 1
@@ -197,40 +433,53 @@ inline void communicationLock()
     // 'A' or 'a' and lock
     for(;;)
     {
-        if (UART_REG.SCIFFCT.bit.ABD) //add sci A/B automatic detection and fixed baud at 19200
+        /* Serial Section */
+        if (UART_REG.SCIFFCT.bit.ABD == 1) //add sci A/B automatic detection and fixed baud at 19200
         {
+            timoutReset();
+
             // After autobaud lock, clear the ABD and CDC bits
             UART_REG.SCIFFCT.bit.ABDCLR = 1;
             UART_REG.SCIFFCT.bit.CDC = 0;
             while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
             byteData = UART_REG.SCIRXBUF.bit.RXDT;
             UART_REG.SCITXBUF = byteData;
-
             //set SCIA get/Send pointers
             GetOnlyWordData = SCIA_GetOnlyWordData;
             SendCheckSum = SendCheckSumSci;
             break;
         }
-        else if (ECanaRegs.CANRMP.bit.RMP1 & ECanaMboxes.MBOX1.MDL.word.HI_WORD == 0x2000){ }
+        /* CAN Section */
+        else if (ECanaRegs.CANRMP.all)
         {
-            canSendMailBox0(ECanaMboxes.MBOX1.MDL.word.LOW_WORD); //Echo
-            //set CAN get/Send pointers
-        }
-
-
+            if ((ECanaMboxes.MBOX1.MDL.byte.BYTE1 == 0x20)&&
+                (ECanaMboxes.MBOX1.MDL.byte.BYTE2 == 0x00))
+            {
+                TxData[0]= 0x4F;
+                TxData[1]= 0x20;
+                TxData[4]=1;
+                canSendMailBox0(&TxData[0],8); //Echo
+                //set CAN get/Send pointers
+                //set get/Send pointers
+                GetOnlyWordData = getWordCanMailBox1Data;
+                SendCheckSum = SendCheckSumCAN;
+                EALLOW;     // EALLOW enables access to protected bits
+                ECanaRegs.CANRMP.all = 0x00000002;
+                EDIS;
+                break;
+             }
+         }
     }
-
-    timoutReset();
-
-
-
     return;
 }
 #else
-
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(SCIA_AutobaudLock, "ramfuncs");
+#endif
 inline void SCIA_AutobaudLock()
 {
 
+    SendCheckSum = SendCheckSumSci;
     Uint16 byteData;
 
     // Must prime baud register with >= 1
@@ -297,11 +546,12 @@ Uint16 SCIA_GetWordData()
 #ifdef RUN_FROM_RAM
 #pragma CODE_SECTION(SCIA_GetOnlyWordData,"ramfuncs");
 #endif
+extern unsigned long serialCounter;
+
 Uint16 SCIA_GetOnlyWordData()
 {
 	Uint16 wordData;
 	Uint16 byteData;
-
 
 	wordData = 0x0000;
 	byteData = 0x0000;

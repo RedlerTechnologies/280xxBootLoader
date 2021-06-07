@@ -40,6 +40,7 @@ void InitECanA(Uint32 canbtc)       // Initialize eCAN-A module
     struct ECAN_REGS ECanaShadow;
 
     EALLOW;     // EALLOW enables access to protected bits
+    SysCtrlRegs.PCLKCR0.bit.ECANAENCLK=1;   // eCAN-A
 
 
     /* Configure eCAN RX and TX pins for CAN operation using eCAN regs*/
@@ -290,29 +291,46 @@ void Ecan_set_tx_mailbox(Uint16 dev_id, Uint16 mbox_id, Uint32 MsgId, Uint16 ext
 }
 
 
-
-void canSendMailBox0(Uint16 data)
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(bigEndian, "ramfuncs");
+#endif
+Uint16 bigEndian(Uint16 data1,Uint16 data2)
 {
-    ECanaMboxes.MBOX0.MSGCTRL.bit.DLC = 4;
-    ECanaMboxes.MBOX0.MDL.word.HI_WORD = 0x2000;
-    ECanaMboxes.MBOX0.MDL.word.LOW_WORD = data;
+    return(data2|((data1&0xFF)<<8));
+}
+
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(canSendMailBox0, "ramfuncs");
+#endif
+void canSendMailBox0(Uint16 data[],Uint16 length)
+{
+    ECanaMboxes.MBOX0.MSGCTRL.bit.DLC = length;
+    switch(length)
+    {
+    case 8:
+    case 7:
+        ECanaMboxes.MBOX0.MDH.word.LOW_WORD = bigEndian(data[6],data[7]);
+    case 6:
+    case 5:
+        ECanaMboxes.MBOX0.MDH.word.HI_WORD = bigEndian(data[4],data[5]) ;
+    case 4:
+    case 3:
+        ECanaMboxes.MBOX0.MDL.word.LOW_WORD = bigEndian(data[2],data[3]);
+    case 2:
+    case 1:
+        ECanaMboxes.MBOX0.MDL.word.HI_WORD = bigEndian(data[0],data[1]);
+        break;
+    default:
+        return;
+    }
     ECanaRegs.CANTRS.all = (Uint32)BIT0;  // request a transmission for MailBox 0
 
 }
 
+
 extern unsigned int checksum;
 
-Uint16 getWordCanMailBox1Data()
-{
-    Uint16 wordData;
 
-    while (!ECanaRegs.CANRMP.bit.RMP1 && ECanaMboxes.MBOX1.MDL.word.HI_WORD != 0x2000){ } //if not ready
-    wordData = ECanaMboxes.MBOX1.MDL.word.LOW_WORD;
-    ECanaRegs.CANRMP.all = (Uint32)BIT1;
-    checksum += ECanaMboxes.MBOX1.MDL.byte.BYTE0 + ECanaMboxes.MBOX1.MDL.byte.BYTE1;
-
-    return wordData;
-}
 
 #ifdef KUKU
 

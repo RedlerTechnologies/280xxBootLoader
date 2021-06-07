@@ -21,7 +21,7 @@
 
 #include "descriptor.h"
 #include "SCI_Boot.h"
-
+#include "ecan.h"
 
 #ifndef NULL
 #define NULL 0
@@ -55,9 +55,10 @@ Uint32 GetLongData();
 //void   CopyData(void);
 void ReadReservedFn(void);
 //After flash_program, send checksum to PC
-void SendCheckSumSci();
-Uint16 CsmUnlock();
+Uint16 SendCheckSumSci();
+Uint16 SendCheckSumCAN();
 
+Uint16 CsmUnlock();
 
 //Programming Buffer
 Uint16 progBuf[PROG_BUFFER_LENGTH];
@@ -67,6 +68,12 @@ FLASH_ST FlashStatus;
 extern Uint32 Flash_CPUScaleFactor;
 extern void (*Flash_CallbackPtr) (void);
 
+
+CIRCBUF  BuffCyclic;
+CIRCBUF *BuffPtr= &BuffCyclic;
+unsigned long RemainingBytes=0;
+unsigned long RemainingBytes1=0;
+Uint16 toggleBit=0;
 unsigned int checksum;
 Uint16 sectorMask=(/*SECTORA | SECTORB|*/ SECTORC | SECTORD |SECTORE | SECTORF | SECTORG | SECTORH);
 
@@ -124,7 +131,7 @@ void sectorErase(Uint16 sector)
 void CopyData()
 {
    Uint16 wordData;
-   Uint16 status;
+   Uint16 status = 0;
    Uint16 i,j;
    volatile int errCode=0;
    //Make sure code security is disabled
@@ -151,11 +158,11 @@ void CopyData()
        sectorErase(SECTORA&sectorMask);
 
 
-   /*Master stop sending txt file and wait for checksum*/
+   /* Master stop sending txt file and wait for checksum*/
    // After Flash Erase, send the checksum to PC program.
    SendCheckSum();
 
-   /*MMaster send worn number 12 from txt*/
+   /* Master send worn number 12 from txt*/
    // Get the size in words of the first block
    BlockHeader.BlockSize = (*GetOnlyWordData)();
 
@@ -164,13 +171,13 @@ void CopyData()
    // as it is assumed the DestAddr is a valid
    // memory location
 
-
    while(BlockHeader.BlockSize != (Uint16)0x0000)
    {
-	  if(BlockHeader.BlockSize > PROG_BUFFER_LENGTH)
-      {
+       //Block is to big to fit into our buffer so we must program it in chunks
+       BlockHeader.DestAddr = GetLongData();
+       if(BlockHeader.BlockSize > PROG_BUFFER_LENGTH)
+       {
 		  //Block is to big to fit into our buffer so we must program it in chunks
-	      BlockHeader.DestAddr = GetLongData();
 	      //Program as many full buffers as possible
 	      for(j = 0; j < (BlockHeader.BlockSize / PROG_BUFFER_LENGTH); j++)
           {
@@ -224,7 +231,6 @@ void CopyData()
       else
       {
 		  //Block will fit into our buffer so we'll program it all at once
-	      BlockHeader.DestAddr = GetLongData();
 	      BlockHeader.ProgBuffAddr = (Uint32)progBuf;
 	      for(i = 1; i <= BlockHeader.BlockSize; i++)
 	      {
@@ -251,11 +257,10 @@ void CopyData()
       BlockHeader.BlockSize = (*GetOnlyWordData)();
    }
 
-	if (errCode)
-	    callBootLoader();
-	else
-	    ResetDog();//callMain();
-
+   if (errCode)
+       callBootLoader();
+   else
+	   ResetDog();//callMain();
 
    return;
 }
@@ -303,6 +308,18 @@ void ReadReservedFn()
     }
     return;
 }
+//#################################################
+//-----------------------------------------------------
+// This function sends checksum to PC program
+// After flash memory erases or writes something, this functions will be running
+//-----------------------------------------------------
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(SendCheckSumCAN, "ramfuncs");
+#endif
+Uint16 SendCheckSumCAN()
+{
+    return 0;
+}
 
 //#################################################
 // void SendCheckSum(void)
@@ -311,9 +328,9 @@ void ReadReservedFn()
 // After flash memory erases or writes something, this functions will be running
 //-----------------------------------------------------
 #ifdef RUN_FROM_RAM
-#pragma CODE_SECTION(SendCheckSum, "ramfuncs");
+#pragma CODE_SECTION(SendCheckSumSci, "ramfuncs");
 #endif
-void SendCheckSumSci()
+Uint16 SendCheckSumSci()
 {
 
  	while(!UART_REG.SCICTL2.bit.TXRDY)
@@ -326,5 +343,5 @@ void SendCheckSumSci()
 	}
 	UART_REG.SCITXBUF = (checksum >> 8) & 0xFF;
  	checksum = 0;
-   	return;
+   	return 0;
 }
