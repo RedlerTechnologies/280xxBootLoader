@@ -78,8 +78,9 @@ extern "C" {
 
 extern __cregister volatile unsigned int IFR;
 extern __cregister volatile unsigned int IER;
-
+// Enable Interupt
 #define  EINT   __asm(" clrc INTM")
+// Disable Interupt
 #define  DINT   __asm(" setc INTM")
 #define  ERTM   __asm(" clrc DBGM")
 #define  DRTM   __asm(" setc DBGM")

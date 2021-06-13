@@ -2051,6 +2051,7 @@ void gpioInit(void)
         GpioCtrlRegs.GPBMUX1.bit.GPIO39 = 0;    // 0=GPIO,  1=Resv,  2=Resv,  3=Resv
         GpioCtrlRegs.GPBDIR.bit.GPIO39 = 1;     // 1=OUTput,  0=INput
         GpioDataRegs.GPBCLEAR.bit.GPIO39 = 1;   // uncomment if --> Set Low initially
+        GpioDataRegs.GPBSET.bit.GPIO39 = 1;   // uncomment if --> Set Low initially
     //  GpioDataRegs.GPBSET.bit.GPIO39 = 1;     // uncomment if --> Set High initially
     //--------------------------------------------------------------------------------------
     //  GPIO-40 - PIN FUNCTION = UART2_TX

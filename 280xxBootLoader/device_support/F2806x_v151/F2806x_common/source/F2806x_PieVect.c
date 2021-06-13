@@ -195,11 +195,10 @@ void InitPieVectTable(void)
 	EALLOW;
 	for(i=0; i < 125; i++)
 		*Dest++ = *Source++;
-	EDIS;
+    EDIS;
 
 	// Enable the PIE Vector Table
 	PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
-
 }
 
 //===========================================================================

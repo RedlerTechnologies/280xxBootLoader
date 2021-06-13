@@ -44,7 +44,7 @@ void InitCpuTimers(void)
 	//CpuTimer0.InterruptCount = 0;
 
 
-// Initialize address pointers to respective timer registers:
+	// Initialize address pointers to respective timer registers:
 	CpuTimer1.RegsAddr = &CpuTimer1Regs;
 	CpuTimer2.RegsAddr = &CpuTimer2Regs;
 	// Initialize timer period to maximum:
@@ -62,7 +62,7 @@ void InitCpuTimers(void)
 	CpuTimer1Regs.TCR.bit.TRB = 1;
 	CpuTimer2Regs.TCR.bit.TRB = 1;
 	// Reset interrupt counters:
-	//CpuTimer1.InterruptCount = 0;
+	CpuTimer1.InterruptCount = 0;
 	//CpuTimer2.InterruptCount = 0;
 
 }

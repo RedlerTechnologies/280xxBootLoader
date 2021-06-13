@@ -45,18 +45,19 @@ void InitECanA(Uint32 canbtc)       // Initialize eCAN-A module
 
     /* Configure eCAN RX and TX pins for CAN operation using eCAN regs*/
 
-        ECanaShadow.CANTIOC.all = ECanaRegs.CANTIOC.all;
-        ECanaShadow.CANTIOC.bit.TXFUNC = 1;
-        ECanaRegs.CANTIOC.all = ECanaShadow.CANTIOC.all;
+    ECanaShadow.CANTIOC.all = ECanaRegs.CANTIOC.all;
+    ECanaShadow.CANTIOC.bit.TXFUNC = 1;
+    ECanaRegs.CANTIOC.all = ECanaShadow.CANTIOC.all;
 
-        ECanaShadow.CANRIOC.all = ECanaRegs.CANRIOC.all;
-        ECanaShadow.CANRIOC.bit.RXFUNC = 1;
-        ECanaRegs.CANRIOC.all = ECanaShadow.CANRIOC.all;
+    ECanaShadow.CANRIOC.all = ECanaRegs.CANRIOC.all;
+    ECanaShadow.CANRIOC.bit.RXFUNC = 1;
+    ECanaRegs.CANRIOC.all = ECanaShadow.CANRIOC.all;
     /* Configure eCAN for HECC mode - (reqd to access mailboxes 16 thru 31) */
     // HECC mode also enables time-stamping feature
 
     ECanaShadow.CANMC.all = ECanaRegs.CANMC.all;
     ECanaShadow.CANMC.bit.SCB = 1;
+    ECanaShadow.CANMC.bit.SRES = 1;     // Can system reset
     ECanaRegs.CANMC.all = ECanaShadow.CANMC.all;
 
     /* Initialize all bits of 'Master Control Field' to zero */
@@ -130,17 +131,18 @@ void InitECanA(Uint32 canbtc)       // Initialize eCAN-A module
        ECanaShadow.CANBTC.bit.TSEG1REG = 9;
        ECanaShadow.CANBTC.bit.SAM = 1;
 #endif
-       ECanaRegs.CANBTC.all = ECanaShadow.CANBTC.all;
+    ECanaRegs.CANBTC.all = ECanaShadow.CANBTC.all;
 
-       ECanaShadow.CANMC.all = ECanaRegs.CANMC.all;
-       ECanaShadow.CANMC.bit.CCR = 0 ;            // Set CCR = 0
-       ECanaRegs.CANMC.all = ECanaShadow.CANMC.all;
+    ECanaShadow.CANMC.all = ECanaRegs.CANMC.all;
+    ECanaShadow.CANMC.bit.CCR = 0 ;            // Set CCR = 0
+    ECanaRegs.CANMC.all = ECanaShadow.CANMC.all;
 
-       // Wait until the CPU no longer has permission to change the configuration registers
-       do
-       {
-         ECanaShadow.CANES.all = ECanaRegs.CANES.all;
-       } while(ECanaShadow.CANES.bit.CCE != 0 );       // Wait for CCE bit to be  cleared..
+
+    // Wait until the CPU no longer has permission to change the configuration registers
+    do
+    {
+        ECanaShadow.CANES.all = ECanaRegs.CANES.all;
+    } while(ECanaShadow.CANES.bit.CCE != 0 );       // Wait for CCE bit to be  cleared..
     /* Disable all Mailboxes  */
     ECanaRegs.CANME.all = 0;        // Required before writing the MSGIDs
 

@@ -10,7 +10,7 @@
 #ifndef _SCI_BOOT_H
 #define _SCI_BOOT_H
 
-
+Uint16 sdoSegmentAck(void);
 #ifdef KUKU
 
 

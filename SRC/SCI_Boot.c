@@ -23,7 +23,8 @@
 #include "Boot.h"
 #include "stdint.h"
 #include "ecan.h"
-
+#include "SCI_Boot.h"
+#include "descriptor.h"
 // Private functions
 #ifdef BAUD_SET
 inline SCI_Init(volatile struct SCI_REGS *regs,uint32_t baudRate);
@@ -281,7 +282,7 @@ Uint16 sdoInitiateDownloadHandle()
         RemainingBytes1=0;
         RemainingBytes = (unsigned long)ECanaMboxes.MBOX1.MDH.byte.BYTE4+256*((unsigned long)ECanaMboxes.MBOX1.MDH.byte.BYTE5);
         RemainingBytes1 = (unsigned long)ECanaMboxes.MBOX1.MDH.byte.BYTE6+256*((unsigned long)ECanaMboxes.MBOX1.MDH.byte.BYTE7);
-        RemainingBytes = (RemainingBytes1 << 16) | RemainingBytes;//RemainingBytes + RemainingBytes1*1024*64;
+        RemainingBytes = (RemainingBytes1 << 16) | RemainingBytes;
         EALLOW;     // EALLOW enables access to protected bits
         ECanaRegs.CANRMP.all = 0x00000002;
         EDIS;
@@ -347,17 +348,14 @@ Uint16 getWordCanMailBox1Data()
 
     if (!RemainingBytes)
         sdoInitiateDownloadHandle(); //wait for new packet
-
     if (BuffPtr->count<2)
-    {
         sdoSegmentGetData(); //wait for new packet
-    }
     if (BuffPtr->count<4)
         sdoSegmentAck();
 
     circBufGet(&tempData1);
     circBufGet(&tempData2);
-   // wordData = ECanaMboxes.MBOX1.MDL.word.HI_WORD;
+    // wordData = ECanaMboxes.MBOX1.MDL.word.HI_WORD;
     wordData = (tempData1|(tempData2<<8));
 
     return wordData;
@@ -379,7 +377,7 @@ Uint16 getWordCanMailBox1Data()
 inline void SCI_Init()
 {
 
-    // Enable the SCI-A clocks
+        // Enable the SCI-A clocks
         EALLOW;
         SysCtrlRegs.PCLKCR0.bit.SCIAENCLK=1;
         #ifdef F2806x_PRE_DEF
@@ -415,6 +413,40 @@ inline void SCI_Init()
 #ifdef RUN_FROM_RAM
 #pragma CODE_SECTION(communicationLock, "ramfuncs");
 #endif
+
+/*
+ *
+ *
+ * 1.1.10.3 Autobaud-Detect Sequence
+ * Bits ABD and CDC in SCIFFCT control the autobaud logic. The SCIRST bit should be enabled to make
+ * autobaud logic work.
+ * If ABD is set while CDC is 1, which indicates auto-baud alignment, SCI transmit FIFO interrupt will occur
+ * (TXINT). After the interrupt service CDC bit has to be cleared by software. If CDC remains set even after
+ * interrupt service, there should be no repeat interrupts.
+ * 1. Enable autobaud-detect mode for the SCI by setting the CDC bit (bit 13) in SCIFFCT and clearing the
+ * ABD bit (Bit 15) by writing a 1 to ABDCLR bit (bit 14).
+ * 2. Initialize the baud register to be 1 or less than a baud rate limit of 500 Kbps.
+ * 3. Allow SCI to receive either character "A" or "a" from a host at the desired baud rate. If the first
+ * character is either "A" or "a". the autobaud- detect hardware will detect the incoming baud rate and set
+ * the ABD bit.
+ * 4. The auto-detect hardware will update the baud rate register with the equivalent baud value hex. The
+ * logic will also generate an interrupt to the CPU.
+ * 5. Respond to the interrupt clear ADB bit by writing a 1 to ABD CLR (bit 14) of SCIFFCT register and
+ * disable further autobaud locking by clearing CDC bit by writing a 0.
+ * 6. Read the receive buffer for character "A" or "a" to empty the buffer and buffer status.
+ * 7. If ABD is set while CDC is 1, which indicates autobaud alignment, the SCI transmit FIFO interrupt will
+ * occur (TXINT). After the interrupt service CDC bit must be cleared by software.
+ * NOTE: At higher baud rates, the slew rate of the incoming data bits can be affected by transceiver
+ * and connector performance. While normal serial communications may work well, this slew
+ * rate may limit reliable autobaud detection at higher baud rates (typically beyond 100k baud)
+ * and cause the auto-baudlock feature to fail.
+ * To avoid this, the followng is recommended:
+ * • Achieve a baud-lock between the host and 28x SCI boot loader using a lower baud rate.
+ * • The host may then handshake with the loaded 28x application to set the SCI baud rate
+ * register to the desired higher baud rate.
+ *
+ *
+ */
 inline void communicationLock()
 {
     Uint16 byteData;
@@ -429,6 +461,7 @@ inline void communicationLock()
     // and clear the ABD bit
     UART_REG.SCIFFCT.bit.CDC = 1;
     UART_REG.SCIFFCT.bit.ABDCLR = 1;
+
     // Wait until we correctly read an
     // 'A' or 'a' and lock
     for(;;)
@@ -449,24 +482,37 @@ inline void communicationLock()
             SendCheckSum = SendCheckSumSci;
             break;
         }
+        else if (UART_REG.SCIRXEMU == 69 || UART_REG.SCIRXEMU == 101){// E || e - Exit boot mode
+            while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
+            byteData = UART_REG.SCIRXBUF.bit.RXDT;
+            UART_REG.SCITXBUF = byteData;
+            DELAY_US(1000L);       // 1mS delay to ensure can send ack
+            ResetDog(); // Return to FW is exist
+        }
         /* CAN Section */
         else if (ECanaRegs.CANRMP.all)
         {
             if ((ECanaMboxes.MBOX1.MDL.byte.BYTE1 == 0x20)&&
                 (ECanaMboxes.MBOX1.MDL.byte.BYTE2 == 0x00))
             {
-                TxData[0]= 0x4F;
-                TxData[1]= 0x20;
-                TxData[4]=1;
-                canSendMailBox0(&TxData[0],8); //Echo
-                //set CAN get/Send pointers
-                //set get/Send pointers
-                GetOnlyWordData = getWordCanMailBox1Data;
-                SendCheckSum = SendCheckSumCAN;
-                EALLOW;     // EALLOW enables access to protected bits
-                ECanaRegs.CANRMP.all = 0x00000002;
-                EDIS;
-                break;
+                if(ECanaMboxes.MBOX1.MDL.byte.BYTE3 == 0x00){
+                    TxData[0]= 0x4F;
+                    TxData[1]= 0x20;
+                    TxData[4]=1;
+                    canSendMailBox0(&TxData[0],8); //Echo
+                    //set CAN get/Send pointers
+                    //set get/Send pointers
+                    GetOnlyWordData = getWordCanMailBox1Data;
+                    SendCheckSum = SendCheckSumCAN;
+                    EALLOW;     // EALLOW enables access to protected bits
+                    ECanaRegs.CANRMP.all = 0x00000002;
+                    EDIS;
+                    break;
+                }
+                else if(ECanaMboxes.MBOX1.MDL.byte.BYTE3 == 0x01){
+                    DELAY_US(1000L);                           // 1mS delay to ensure can send ack
+                    ResetDog();//callMain();
+                }
              }
          }
     }

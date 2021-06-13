@@ -228,8 +228,8 @@ void CopyData()
 	      // After Flash program, send the checksum to PC program.
 	      SendCheckSum();
 	  }
-      else
-      {
+       else
+       {
 		  //Block will fit into our buffer so we'll program it all at once
 	      BlockHeader.ProgBuffAddr = (Uint32)progBuf;
 	      for(i = 1; i <= BlockHeader.BlockSize; i++)
@@ -252,15 +252,16 @@ void CopyData()
 	      // After Flash program, send the checksum to PC program.
 	      SendCheckSum();
 	  }
-
-      // Get the size of the next block
-      BlockHeader.BlockSize = (*GetOnlyWordData)();
+       // Get the size of the next block
+       BlockHeader.BlockSize = (*GetOnlyWordData)();
    }
 
    if (errCode)
        callBootLoader();
-   else
-	   ResetDog();//callMain();
+   else{
+       DELAY_US(1000L);                           // 1mS delay to ensure can send ack
+       ResetDog();//callMain();
+   }
 
    return;
 }

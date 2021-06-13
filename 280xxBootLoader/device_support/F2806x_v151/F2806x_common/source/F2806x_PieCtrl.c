@@ -23,7 +23,6 @@ void InitPieCtrl(void)
 {
     // Disable Interrupts at the CPU level:
     DINT;
-
     // Disable the PIE
     PieCtrlRegs.PIECTRL.bit.ENPIE = 0;
 
@@ -54,7 +53,6 @@ void InitPieCtrl(void)
 	PieCtrlRegs.PIEIFR10.all = 0;
 	PieCtrlRegs.PIEIFR11.all = 0;
 	PieCtrlRegs.PIEIFR12.all = 0;
-
 }
 
 //---------------------------------------------------------------------------
