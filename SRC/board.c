@@ -25,9 +25,13 @@
 #ifdef BOARD_URAYON
 #define BOARD URAYON
 #else
-#define BOARD RAYON70
+#define BOARD STXI_M1
 #endif
 
+/* Define LED pin */
+#if (BOARD == RAYON70)
+#define DRV_LED_TOGGLE    (GpioDataRegs.GPBTOGGLE.bit.GPIO39=1)
+#endif
 
 #if (BOARD == SINGLE_BOARD)
 //--------------------------------------------------------------------------------------

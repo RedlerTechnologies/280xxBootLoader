@@ -59,7 +59,6 @@ extern Uint32 SCI_Boot();
 void (*ApplicationPtr) (void);
 __interrupt void cpu_timer0_isr(void);
 void initTimersInterupt();
-void blinkLed();
 
 void memCopy(Uint16 *srcStartAddr,Uint16 *srcEndAddr,Uint16 *dstAddr)
 {
@@ -93,11 +92,6 @@ void initTimersInterupt(){
     // Enable TINT0 in the PIE: Group 1 interrupt 7
     PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
 
-    //PieCtrlRegs.PIEACK.all = 0xFFFF;      // Enable PIE interrupts
-    //asm("       NOP");                    // Wait one cycle
-    // clears all IER bits
-    //IER |= 0; IER &= 0;
-    //asm("       NOP");                    // Wait one cycle
     // Enable CPU INT1 which is connected to CPU-Timer 0:
     IER |= M_INT1;
     asm("       NOP");                    // Wait one cycle
@@ -108,7 +102,6 @@ void initTimersInterupt(){
     DRTM;   // enable DebugInt
 
     CpuTimer0Regs.TCR.all = 0x4001; // Use write-only instruction to set TSS bit = 0
-    //blinkLed();
 }
 
 Uint32 main(void)
@@ -152,22 +145,6 @@ Uint32 main(void)
 	return EntryPoint;
 }//Returning from main calls _ExitBoot in Exit_Boot.asm.
 
-
-void blinkLed(){
-
-#ifdef DRV_LED_TOGGLE
-    int counter = 0;
-    while(1){
-    if(counter == 100){
-        DRV_LED_TOGGLE;
-        counter = 0;
-    }
-    counter++;
-    DELAY_US(1000L); // 1mS delay
-    }
-#endif
-
-}
 
 #ifdef RUN_FROM_RAM
 #pragma CODE_SECTION(cpu_timer0_isr, "ramfuncs");

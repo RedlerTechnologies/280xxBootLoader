@@ -482,6 +482,7 @@ inline void communicationLock()
             SendCheckSum = SendCheckSumSci;
             break;
         }
+#if ENABLE_EXIT_BOOT
         else if (UART_REG.SCIRXEMU == 69 || UART_REG.SCIRXEMU == 101){// E || e - Exit boot mode
             while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
             byteData = UART_REG.SCIRXBUF.bit.RXDT;
@@ -489,6 +490,7 @@ inline void communicationLock()
             DELAY_US(1000L);       // 1mS delay to ensure can send ack
             ResetDog(); // Return to FW is exist
         }
+#endif // ENABLE_EXIT_BOOT
         /* CAN Section */
         else if (ECanaRegs.CANRMP.all)
         {
@@ -509,10 +511,12 @@ inline void communicationLock()
                     EDIS;
                     break;
                 }
+#if ENABLE_EXIT_BOOT
                 else if(ECanaMboxes.MBOX1.MDL.byte.BYTE3 == 0x01){
                     DELAY_US(1000L);                           // 1mS delay to ensure can send ack
                     ResetDog();//callMain();
                 }
+#endif // ENABLE_EXIT_BOOT
              }
          }
     }
