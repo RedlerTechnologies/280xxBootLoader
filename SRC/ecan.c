@@ -333,6 +333,67 @@ void canSendMailBox0(Uint16 data[],Uint16 length)
 extern unsigned int checksum;
 
 
+/**
+* @fn Uint32 SelectCANBaudRate(char baud)
+*
+* @brief Select ECan baud rate
+*
+* @author Andrei Mamtsev
+*
+* @param baud  baud rate param
+*   0: 1,000,000
+*   1: 500,000
+*   2: 250,000
+*   3: 125,000
+*   4: 100,000
+*   5: 50,000
+*   6: 50,000
+*   7: 50,000
+*   8: 800,000
+*
+* @return CANBUS Baudrate
+*
+* @date 22.12.2010
+*/
+Uint32 SelectCANBaudRate(int baud)
+{
+
+    Uint32 canbaud;
+
+    switch(baud)
+    {
+        case 0:
+            canbaud=ECANBR_1MBPS_VAL;
+            break;
+        case 1:
+            canbaud=ECANBR_500KBPS_VAL;
+            break;
+        case 2:
+            canbaud=ECANBR_250KBPS_VAL;
+            break;
+        case 3:
+            canbaud=ECANBR_125KBPS_VAL;
+            break;
+        case 4:
+            canbaud=ECANBR_100KBPS_VAL;
+            break;
+        case 5:
+            canbaud=ECANBR_50KBPS_VAL;
+            break;
+        case 6:
+            canbaud=ECANBR_50KBPS_VAL;
+            break;
+        case 7:
+            canbaud=ECANBR_50KBPS_VAL;
+            break;
+        case 8:
+            canbaud=ECANBR_500KBPS_VAL;
+            break;
+
+    }
+    return canbaud;
+}
+
 
 #ifdef KUKU
 
@@ -1103,66 +1164,6 @@ UNS8 canChangeBaudRate(CAN_PORT port, char* baud)
 	return 1;
 }
 
-/**
-* @fn Uint32 SelectCANBaudRate(char baud)
-*
-* @brief Select ECan baud rate 
-*
-* @author Andrei Mamtsev
-*
-* @param baud  baud rate param
-*	0: 1,000,000
-*	1: 500,000
-*	2: 250,000
-*	3: 125,000
-*	4: 100,000
-*	5: 50,000
-*	6: 50,000
-*	7: 50,000
-*	8: 800,000
-*
-* @return CANBUS Baudrate 
-*
-* @date 22.12.2010
-*/
-Uint32 SelectCANBaudRate(long baud)
-{
-
-	Uint32 canbaud;
-
-	switch(baud)
-	{
-        case 0:
-            canbaud=ECANBR_1MBPS_VAL;
-        	break;
-		case 1:
-			canbaud=ECANBR_500KBPS_VAL;
-			break;
-		case 2:
-			canbaud=ECANBR_250KBPS_VAL;
-			break;
-		case 3:
-			canbaud=ECANBR_125KBPS_VAL;
-			break;
-		case 4:
-			canbaud=ECANBR_100KBPS_VAL;
-			break;
-		case 5:
-			canbaud=ECANBR_50KBPS_VAL;
-			break;
-		case 6:
-			canbaud=ECANBR_50KBPS_VAL;
-			break;
-		case 7:
-			canbaud=ECANBR_50KBPS_VAL;
-			break;
-		case 8:
-            canbaud=ECANBR_500KBPS_VAL;
-            break;
-
-	}
-	return canbaud;
-}
 //Uint32 protocolParams[MAX_PROTOCOL_PARAMS];
 void CanInit ()
 {

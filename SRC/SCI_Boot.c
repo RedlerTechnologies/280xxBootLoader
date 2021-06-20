@@ -370,10 +370,8 @@ Uint16 getWordCanMailBox1Data()
 // with the host.
 //----------------------------------------------
 #ifdef RUN_FROM_RAM
-#pragma CODE_SECTION(SCI_Boot, "ramfuncs");
+#pragma CODE_SECTION(SCI_Init, "ramfuncs");
 #endif
-
-
 inline void SCI_Init()
 {
 

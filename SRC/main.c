@@ -43,11 +43,11 @@
  * Shlomi Dar 20/02/2018
  ****************************************************************************/
 
+#include "board.h"
 #include "DSP28x_Project.h"
 #include "descriptor.h"
 #include "boot.h"
 #include "SCI_Boot.h"
-#include "board.h"
 #ifdef CAN
 #include "ecan.h"
 #endif
@@ -125,15 +125,22 @@ Uint32 main(void)
 	memCopy((Uint16 *)&RamfuncsLoadStart,(Uint16 *)&RamfuncsLoadEnd,(Uint16 *)&RamfuncsRunStart);
 
 #ifdef CAN
+	Uint32 SDO_RX = 0x600;
+	Uint32 SDO_TX = 0x580;
+#define UNIT_ID_DFLT 127
 
-#define SDO_RX 0x600
-#define SDO_TX 0x580
-#define UNIT_ID 127
-
+	Uint32* nodeID =  (Uint32*)CAN_NODEID_FLASH;
+	SDO_RX += (*nodeID) > 0 ? (*nodeID) : UNIT_ID_DFLT;
+	SDO_TX += (*nodeID) > 0 ? (*nodeID) : UNIT_ID_DFLT;
+    Uint32* canBaudRate =  (Uint32*)CAN_BAUDRATE_FLASH;
 	SysCtrlRegs.PCLKCR0.bit.ECANAENCLK=1;   // eCAN-A
-	InitECanA(ECANBR_1MBPS_VAL);
-	Ecan_set_tx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX, SDO_TX + UNIT_ID , 0);
-	Ecan_set_rx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX+1, SDO_RX + UNIT_ID, 0xFFFFFFFF, 0); // NODEID = 0
+	int baudRate = (*canBaudRate);
+	if(baudRate <= 8)
+	    InitECanA(SelectCANBaudRate((*canBaudRate)));
+	else
+        InitECanA(SelectCANBaudRate(0));
+	Ecan_set_tx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX, SDO_TX, 0);
+	Ecan_set_rx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX+1, SDO_RX, 0xFFFFFFFF, 0); // NODEID = 0
 	circBufInit(txMem,sizeof(txMem));
 #endif
 
@@ -151,13 +158,13 @@ Uint32 main(void)
 #endif
 __interrupt void cpu_timer0_isr(void)
 {
-    #ifdef DRV_LED_TOGGLE
+    /*#ifdef DRV_LED_TOGGLE
     if(CpuTimer1.InterruptCount == 100){
         DRV_LED_TOGGLE;
         CpuTimer1.InterruptCount = 0;
     }
     CpuTimer1.InterruptCount++;
-    #endif
+    #endif*/
 
    CpuTimer0.InterruptCount++;
    if (CpuTimer0.InterruptCount>2000) //2 SEC TIMOUT

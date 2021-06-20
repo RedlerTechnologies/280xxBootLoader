@@ -28,10 +28,6 @@
 #define BOARD STXI_M1
 #endif
 
-/* Define LED pin */
-#if (BOARD == RAYON70)
-#define DRV_LED_TOGGLE    (GpioDataRegs.GPBTOGGLE.bit.GPIO39=1)
-#endif
 
 #if (BOARD == SINGLE_BOARD)
 //--------------------------------------------------------------------------------------
@@ -1801,6 +1797,8 @@ void gpioInit(void)
 // FOR TMS320F28069 PZP/PZ 100-Pin Package
 //--------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------
+/* Define LED pin */
+#define DRV_LED_TOGGLE    (GpioDataRegs.GPBTOGGLE.bit.GPIO39=1)
 
 void gpioInit(void)
 {

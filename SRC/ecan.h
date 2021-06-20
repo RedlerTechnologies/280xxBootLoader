@@ -84,6 +84,13 @@
 
 #define MSG_GET_DATA_MAILBOX ECANA_FIRST_STATIC_TX_MAILBOX
 
+/*
+ *  Baudrate and Node ID addresses in flash
+ */
+#define CAN_BAUDRATE_FLASH 0x003F0149
+#define CAN_NODEID_FLASH   0x003F018C
+#define ADDRESS_VALUE(x) {.ptr = (x)}
+
 struct sEcanLData
 {
 	Uint32	MDL;
@@ -198,6 +205,23 @@ typedef struct {
     Uint16 data[8]; /**< message's datas */
 } Message;
 
+/**
+ * @brief CAN Available BaudRate
+ * @ingroup can
+ */
+typedef  enum
+{
+    BaudRate1MEGA = 0,
+    BaudRate500K  = 1,
+    BaudRate250K  = 2,
+    BaudRate125K  = 3,
+    BaudRate100K  = 4,
+    BaudRate50K  = 5,
+    BaudRate50KA  = 6,
+    BaudRate50KB  = 7,
+    BaudRate500KA  = 8
+}Baud_t;
+
 /*
  *  ECANHW_Handle is an opaque pointer.  Individual implementations of ECANHW
  *  will define ECANHW_Obj differently.  ECANHW_Obj is a private structure and
@@ -240,7 +264,7 @@ int16 Ecan_rxmbrdy(Uint16 dev_id);
 int16 Ecan_error(Uint16 dev_id);
 int16 Ecan_TX_Abort(Uint16 dev_id);
 int16 Ecan_TimeOut(Uint16 dev_id);
-Uint32 SelectCANBaudRate(long baud);
+Uint32 SelectCANBaudRate(int baud);
 void CanInit ();
 void canHandle();
 void CanPlot();
