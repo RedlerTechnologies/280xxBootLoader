@@ -129,14 +129,17 @@ Uint32 main(void)
 	Uint32 SDO_TX = 0x580;
 #define UNIT_ID_DFLT 127
 
-	Uint32* nodeID =  (Uint32*)CAN_NODEID_FLASH;
-	SDO_RX += (*nodeID) > 0 ? (*nodeID) : UNIT_ID_DFLT;
-	SDO_TX += (*nodeID) > 0 ? (*nodeID) : UNIT_ID_DFLT;
-    Uint32* canBaudRate =  (Uint32*)CAN_BAUDRATE_FLASH;
+	Uint32* nodeIDptr =  (Uint32*)CAN_NODEID_FLASH;
+	int nodeID = (*nodeIDptr);
+	if(nodeID < 0 || nodeID > 127)
+	    nodeID = UNIT_ID_DFLT;
+	SDO_RX += nodeID;
+	SDO_TX += nodeID;
+    Uint32* canBaudRateptr =  (Uint32*)CAN_BAUDRATE_FLASH;
 	SysCtrlRegs.PCLKCR0.bit.ECANAENCLK=1;   // eCAN-A
-	int baudRate = (*canBaudRate);
-	if(baudRate <= 8)
-	    InitECanA(SelectCANBaudRate((*canBaudRate)));
+	int baudRate = (*canBaudRateptr);
+	if(baudRate >= 0 && baudRate <= 8)
+	    InitECanA(SelectCANBaudRate((*canBaudRateptr)));
 	else
         InitECanA(SelectCANBaudRate(0));
 	Ecan_set_tx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX, SDO_TX, 0);
@@ -158,13 +161,13 @@ Uint32 main(void)
 #endif
 __interrupt void cpu_timer0_isr(void)
 {
-    /*#ifdef DRV_LED_TOGGLE
+    #ifdef DRV_LED_TOGGLE
     if(CpuTimer1.InterruptCount == 100){
         DRV_LED_TOGGLE;
         CpuTimer1.InterruptCount = 0;
     }
     CpuTimer1.InterruptCount++;
-    #endif*/
+    #endif
 
    CpuTimer0.InterruptCount++;
    if (CpuTimer0.InterruptCount>2000) //2 SEC TIMOUT

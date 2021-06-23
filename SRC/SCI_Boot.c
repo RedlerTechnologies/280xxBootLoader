@@ -325,9 +325,13 @@ Uint16 sdoSegmentGetData()
 {
     while (!ECanaRegs.CANRMP.bit.RMP1){ } //if not ready
     if (((toggleBit && (ECanaMboxes.MBOX1.MDL.byte.BYTE0 == 0x10))||
-       (!toggleBit && !ECanaMboxes.MBOX1.MDL.byte.BYTE0))
-       ||(ECanaMboxes.MBOX1.MDL.byte.BYTE0 == 0x3))
-    {
+         (!toggleBit && !ECanaMboxes.MBOX1.MDL.byte.BYTE0)) &&
+        (RemainingBytes > 7)){
+
+        getData();
+        return 0;
+    }
+    else if(ECanaMboxes.MBOX1.MDL.byte.BYTE0 & 0x01 == 1){
         getData();
         return 0;
     }

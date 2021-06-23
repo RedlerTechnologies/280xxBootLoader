@@ -10,23 +10,7 @@
 #include "board.h"
 
 
-/****Select Board**********/
-#define URAYON          1
-#define RAYON30         2
-#define SINGLE_BOARD    3
-#define RAYON_HP_V1     4
-#define TMDM_MK6_V2     5
-#define RAYON70         6
-#define SHRAKRAK        7
-#define SINGLE_M        8
-#define RAYON70L        9// empty
-#define STXI_M1         10
 
-#ifdef BOARD_URAYON
-#define BOARD URAYON
-#else
-#define BOARD STXI_M1
-#endif
 
 
 #if (BOARD == SINGLE_BOARD)
@@ -1797,8 +1781,6 @@ void gpioInit(void)
 // FOR TMS320F28069 PZP/PZ 100-Pin Package
 //--------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------
-/* Define LED pin */
-#define DRV_LED_TOGGLE    (GpioDataRegs.GPBTOGGLE.bit.GPIO39=1)
 
 void gpioInit(void)
 {
