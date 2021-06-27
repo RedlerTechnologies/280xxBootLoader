@@ -142,6 +142,8 @@ void CopyData()
    Flash_CallbackPtr = NULL;
    EDIS;
 
+   timoutReset();
+
    /*************Erase *********************/
    if (ReservedFn[0])
 	   sectorMask=ReservedFn[0]&0x00FF;
@@ -197,7 +199,7 @@ void CopyData()
 		      {
 		    	  errCode=1;
 		    	  __asm ("      ESTOP0");
-		          return ;
+		    	  return ;
 		      }
 		      BlockHeader.DestAddr += PROG_BUFFER_LENGTH;
 
@@ -222,7 +224,7 @@ void CopyData()
 	      {
 	    	  errCode=2;
 	    	  __asm ("      ESTOP0");
-	          return ;
+	    	  return ;
 	      }
 	      /*Master stop sending txt file and wait for checksum*/
 	      // After Flash program, send the checksum to PC program.
@@ -247,7 +249,7 @@ void CopyData()
 	      {
 	    	  errCode=3;
 	    	  __asm ("      ESTOP0");
-	          return ;
+	    	  return;
 	      }
 	      // After Flash program, send the checksum to PC program.
 	      SendCheckSum();
@@ -259,7 +261,7 @@ void CopyData()
    if (errCode)
        callBootLoader();
    else{
-       DELAY_US(1000L);                           // 1mS delay to ensure can send ack
+       DELAY_US(5000L);                           // 5mS delay to ensure can send ack
        ResetDog();//callMain();
    }
 
@@ -328,21 +330,19 @@ Uint16 SendCheckSumCAN()
 // This function sends checksum to PC program
 // After flash memory erases or writes something, this functions will be running
 //-----------------------------------------------------
+
 #ifdef RUN_FROM_RAM
 #pragma CODE_SECTION(SendCheckSumSci, "ramfuncs");
 #endif
 Uint16 SendCheckSumSci()
 {
 
- 	while(!UART_REG.SCICTL2.bit.TXRDY)
-	{
-	}
+ 	while(!UART_REG.SCICTL2.bit.TXRDY);
  	UART_REG.SCITXBUF = checksum & 0xFF;
 
-	while(!UART_REG.SCICTL2.bit.TXRDY)
-	{
-	}
+	while(!UART_REG.SCICTL2.bit.TXRDY);
 	UART_REG.SCITXBUF = (checksum >> 8) & 0xFF;
+
  	checksum = 0;
    	return 0;
 }

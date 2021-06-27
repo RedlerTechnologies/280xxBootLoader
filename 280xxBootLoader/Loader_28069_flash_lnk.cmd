@@ -76,8 +76,8 @@ PAGE 0 :   /* Program Memory */
    FLASHB      : origin = 0x3F0000, length = 0x004000     /* on-chip FLASH - parameters */
 
    /***FLASH A***/
-   LOADER_DESC  : origin = 0x3F4000, length = 0x000040  /*Loader descriptor 64 words*/
-   LOADER       : origin = 0x3F4040, length = 0x003F40  /*0x3F4040-0x3F7F80, loader main program*/
+   LOADER_DESC  : origin = 0x3F4000, length = 0x000100  /*Loader descriptor 64 words*/
+   LOADER       : origin = 0x3F4100, length = 0x003E80  /*0x3F4040-0x3F7F80, loader main program*/
    //FLASHA      : origin = 0x3F4000, length = 0x003F80     /* on-chip FLASH */
 
    CSM_RSVD    : origin = 0x3F7F80, length = 0x000076     /* Part of FLASHA.  Program with all 0x0000 when CSM is in use. */

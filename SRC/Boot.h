@@ -134,6 +134,4 @@ inline void timoutReset()
 	CpuTimer0.InterruptCount=0;
 }
 
-
-
 #endif  // end of TMS320x2802x_BOOT_H definition

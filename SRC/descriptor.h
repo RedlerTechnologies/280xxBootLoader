@@ -37,7 +37,7 @@
 #define SW_MAJOR	 00
 #define SW_MINOR	 03
 #define SW_SUBMINOR	 00
-#define SW_PATCH 	 00
+#define SW_PATCH 	 01
 
 #define LOADER_VER (SW_MAJOR*1000000L+SW_MINOR*10000L+SW_SUBMINOR*100L+SW_PATCH)
 
@@ -94,7 +94,7 @@ struct sLoaderInterfaceTable //size 16bit x 64
     void (*entry)();       /* Loader entry point */
     Uint32 hw_rev;         /* hardware version */
     Uint32 serial;         /* unit serial number */
-    Uint32 partNamber;     /* unit part number */
+    Uint32 partNumber[5];  /* unit part number */
     Uint32 productionDate; /* production date week year WWYYYY*/
     Uint32 LOT;            /* LOT number */
     Uint16 techCode;       /* Technician code*/

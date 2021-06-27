@@ -10,7 +10,26 @@
 #ifndef _SCI_BOOT_H
 #define _SCI_BOOT_H
 
+#include <stdint.h>
+
 Uint16 sdoSegmentAck(void);
+void SCI_Re_Init(volatile struct SCI_REGS *regs, uint32_t baudRate);
+
+unsigned long lspClkRate(void);
+
+typedef enum
+{
+     Rate_4800=0,
+     Rate_9600=1,
+     Rate_19200=2,
+     Rate_38400=3,
+     Rate_57600=4,
+     Rate_115200=5,
+     Rate_230400=6,
+     Rate_460800=7,
+     Rate_921600=8
+}baudRate;
+
 #ifdef KUKU
 
 

@@ -411,10 +411,7 @@ inline void SCI_Init()
 //------------------------------------------------
 
 
-#ifdef CAN
-#ifdef RUN_FROM_RAM
-#pragma CODE_SECTION(communicationLock, "ramfuncs");
-#endif
+
 
 /*
  *
@@ -449,12 +446,19 @@ inline void SCI_Init()
  *
  *
  */
+#ifdef CAN
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(communicationLock, "ramfuncs");
+#endif
 inline void communicationLock()
 {
     Uint16 byteData;
     Uint16 TxData[8]={0};
+    uint16_t brr;
 
+//#define ENABLE_HW_ABD 1
     /*Set SCIA_AutobaudLock */
+#if ENABLE_HW_ABD
     // Must prime baud register with >= 1
     UART_REG.SCIHBAUD = 0;
     UART_REG.SCILBAUD = 1;
@@ -463,11 +467,23 @@ inline void communicationLock()
     // and clear the ABD bit
     UART_REG.SCIFFCT.bit.CDC = 1;
     UART_REG.SCIFFCT.bit.ABDCLR = 1;
+#else
+    int sci_counter = 0;
+    int sci_lock = 0;
+    uint32_t baud = 9600;
+    // set fixed baudrate to 9600 bps
+    brr=(uint16_t)((lspClkRate()/(baud*8UL))-1UL);
+    UART_REG.SCIHBAUD    = (brr>>8)&0xff;//0x0;//0x1;//0x0; //(brr>>8)&0xff;
+    UART_REG.SCILBAUD    = (brr)&0xff;//0xB;//0x24;//0xB;// (brr)&0xff;
+    UART_REG.SCIFFCT.bit.ABDCLR = 0;
+    UART_REG.SCIFFCT.bit.CDC = 0;
 
+#endif
     // Wait until we correctly read an
     // 'A' or 'a' and lock
     for(;;)
     {
+#if ENABLE_HW_ABD
         /* Serial Section */
         if (UART_REG.SCIFFCT.bit.ABD == 1) //add sci A/B automatic detection and fixed baud at 19200
         {
@@ -484,6 +500,84 @@ inline void communicationLock()
             SendCheckSum = SendCheckSumSci;
             break;
         }
+#else
+        if(!sci_lock){
+            if (UART_REG.SCIRXEMU != 0x0){ // Verify if sci buffer not empty and if we are not in sci lock mode
+                timoutReset();
+                while(UART_REG.SCIRXST.bit.RXRDY != 1);
+                byteData = UART_REG.SCIRXBUF.bit.RXDT;
+                if(!sci_counter && byteData == 0xEC)
+                    sci_counter++;
+                else if(sci_counter && byteData == 0xA1){
+                    checksum = 0xB1AC;
+                    SendCheckSumSci();
+                    sci_lock = 1;
+                    sci_counter = 0;
+                }
+                else
+                    sci_lock = sci_counter = 0;
+            }
+        }
+        if(sci_lock){
+            if(UART_REG.SCIRXEMU != 0x0){ // Verify if sci buffer not empty and if we are in sci lock mode, so it can change baudrate
+                timoutReset();
+                while(UART_REG.SCIRXST.bit.RXRDY != 1);
+                byteData = UART_REG.SCIRXBUF.bit.RXDT;
+                if(!sci_counter && byteData == 0xBD)
+                    sci_counter++;
+                else if(sci_counter && ((byteData >> 4) == 0xC)){
+                    checksum = (byteData << 8) | 0xAC;
+                    SendCheckSumSci();
+                    DELAY_US(5000L);       // 5mS delay
+                    switch (byteData & 0xF)
+                    {
+
+                        case Rate_9600:
+                            baud = 9600;
+                            break;
+                        case Rate_19200:
+                            baud = 19200;
+                            break;
+                        case Rate_38400:
+                            baud = 38400;
+                            break;
+                        case Rate_57600:
+                            baud = 57600;
+                            break;
+                        case Rate_115200:
+                            baud = 115200;
+                            break;
+                        case Rate_230400:
+                            baud = 230400;
+                            break;
+                        case Rate_460800:
+                            baud = 460800;
+                            break;
+                        case Rate_921600:
+                            baud = 921600;
+                            break;
+                        default:
+                            baud = 115200;
+                            break;
+                    }
+
+                    brr=(uint16_t)((lspClkRate()/(baud*8UL))-1UL);
+                    UART_REG.SCIHBAUD    = (brr>>8)&0xff;
+                    UART_REG.SCILBAUD    = (brr)&0xff;
+                    sci_counter = 0;
+
+                    //set SCIA get/Send pointers
+                    checksum = 0;
+                    GetOnlyWordData = SCIA_GetOnlyWordData;
+                    SendCheckSum = SendCheckSumSci;
+                    break;
+                }
+                else
+                    sci_lock = sci_counter = 0;
+            }
+        }
+
+#endif
 #if ENABLE_EXIT_BOOT
         else if (UART_REG.SCIRXEMU == 69 || UART_REG.SCIRXEMU == 101){// E || e - Exit boot mode
             while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
@@ -598,8 +692,6 @@ Uint16 SCIA_GetWordData()
 #ifdef RUN_FROM_RAM
 #pragma CODE_SECTION(SCIA_GetOnlyWordData,"ramfuncs");
 #endif
-extern unsigned long serialCounter;
-
 Uint16 SCIA_GetOnlyWordData()
 {
 	Uint16 wordData;
@@ -607,16 +699,13 @@ Uint16 SCIA_GetOnlyWordData()
 
 	wordData = 0x0000;
 	byteData = 0x0000;
-
 	// Fetch the LSB and verify back to the host
-	while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
+	while(UART_REG.SCIRXST.bit.RXRDY != 1);
 	wordData =  (Uint16)UART_REG.SCIRXBUF.bit.RXDT;
-	//UART_REG.SCITXBUF = wordData;
 
 	// Fetch the MSB and verify back to the host
-	while(UART_REG.SCIRXST.bit.RXRDY != 1) { }
+	while(UART_REG.SCIRXST.bit.RXRDY != 1);
 	byteData =  (Uint16)UART_REG.SCIRXBUF.bit.RXDT;
-	//UART_REG.SCITXBUF = byteData;
 
 	checksum += wordData + byteData;
 	// form the wordData from the MSB:LSB
@@ -625,9 +714,22 @@ Uint16 SCIA_GetOnlyWordData()
 	return wordData;
 }
 
+#define DSP_CLOCK 90e6
+#ifdef RUN_FROM_RAM
+#pragma CODE_SECTION(lspClkRate,"ramfuncs");
+#endif
+unsigned long lspClkRate(void)
+{
+    const unsigned int lspDivTable[8]= {1, 2, 4, 6, 8, 10, 12, 14};
+    volatile uint32_t chSC,chSc1,chSc2;
 
+    chSC=DSP_CLOCK;
+    chSc1=lspDivTable[SysCtrlRegs.LOSPCP.all];
+    chSc2=chSC/chSc1;
+    return ((unsigned long)DSP_CLOCK)/lspDivTable[SysCtrlRegs.LOSPCP.all];
 
-//#define BAUD_SET
+}
+#define BAUD_SET
 #ifdef BAUD_SET
 
 #define SCI_OPMODE_POLLING      0   /**< SCI polling mode operation */
@@ -652,20 +754,10 @@ Uint16 SCIA_GetOnlyWordData()
 #define SCI_PARITY_ODD          0x2 /**< odd parity */
 #define SCI_PARITY_EVEN         0x3 /**< even parity */
 
-#define DSP_CLOCK 90e6
 
-unsigned long lspClkRate(void)
-{
-    const unsigned int lspDivTable[8]= {1, 2, 4, 6, 8, 10, 12, 14};
-    volatile uint32_t chSC,chSc1,chSc2;
 
-    chSC=DSP_CLOCK;
-    chSc1=lspDivTable[SysCtrlRegs.LOSPCP.all];
-    chSc2=chSC/chSc1;
-    return ((unsigned long)DSP_CLOCK)/lspDivTable[SysCtrlRegs.LOSPCP.all];
-
-}
-
+#define SCI_RE_INIT
+#ifdef SCI_RE_INIT
 void sciSetBaud(volatile struct SCI_REGS *regs, uint32_t baud)
 {
     uint16_t brr;
@@ -675,14 +767,15 @@ void sciSetBaud(volatile struct SCI_REGS *regs, uint32_t baud)
     regs->SCILBAUD    = (brr)&0xff;
 }
 
-inline SCI_Init(volatile struct SCI_REGS *regs, uint32_t baudRate)
+
+void SCI_Re_Init(volatile struct SCI_REGS *regs, uint32_t baudRate)
 {
     // Enable the SCI-A clocks
     EALLOW;
     SysCtrlRegs.PCLKCR0.bit.SCIAENCLK=1;
-    #ifdef F2806x_PRE_DEF
-    SysCtrlRegs.PCLKCR0.bit.SCIBENCLK=1;
-    #endif
+    //#ifdef F2806x_PRE_DEF
+    //SysCtrlRegs.PCLKCR0.bit.SCIBENCLK=1;
+    //#endif
 
     regs->SCICTL1.all =0x0000;  // SCI SW reset
     //regs->SCIPRI.bit.FREE=1;    // free run
@@ -704,14 +797,18 @@ inline SCI_Init(volatile struct SCI_REGS *regs, uint32_t baudRate)
     regs->SCIFFRX.all=0x0000;   // disable rx fifo
     regs->SCIFFCT.all=0x0000;
 
+    //Set debugger related priority
+    //regs->SCIPRI.bit.FREE=1;    // free run
+
     // Relinquish SCI from Reset
     regs->SCICTL1.all=0;
     regs->SCICTL1.bit.RXENA=1; //Enable RX
     regs->SCICTL1.bit.TXENA=1; //Enable TX
     regs->SCICTL1.bit.SWRESET=1;
-
+    //regs->SCICTL1.bit.RXERRINTENA=1;
     EDIS;
 }
+#endif
 #endif
 
 // EOF-------
