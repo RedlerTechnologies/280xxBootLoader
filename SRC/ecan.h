@@ -8,6 +8,8 @@
 * @date 18.07.2010
 */
 
+#include "F2806x_ECan.h"
+
 #ifndef __ECAN_H
 #define __ECAN_H
 
@@ -268,7 +270,7 @@ Uint32 SelectCANBaudRate(int baud);
 void CanInit ();
 void canHandle();
 void CanPlot();
-void canSendMailBox0(Uint16 *data,Uint16 length);
+void canSendMailBox(Uint16 *data,Uint16 length, volatile struct MBOX* MBOXn, int MailBox);
 extern ECAN_TX_PACKET	ecan_tx_packet;
 #ifdef __cplusplus
 }

@@ -61,7 +61,6 @@ uint32_t flashChecksumCalc(uint16_t *CodeStart,uint16_t *CodeEnd)
 
 int overallProgramFlashTest(void)
 {
-
 	volatile uint32_t flashChecksum=0;
 
 	if (appDesc.programChecksum==0) //skip test
@@ -74,7 +73,6 @@ int overallProgramFlashTest(void)
 		return 0;
 	else
 		return 1;
-
 }
 
 

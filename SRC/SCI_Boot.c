@@ -288,11 +288,10 @@ Uint16 sdoInitiateDownloadHandle()
         EDIS;
         SDO_ACK[0]= 0x60;
         SDO_ACK[1]= 0x20;
-        canSendMailBox0(SDO_ACK,8);
+        canSendMailBox(SDO_ACK, 8, &ECanaMboxes.MBOX0, 0);
         return 0;
     }
     else
-      //  canSendMailBox0(SDO_ABORT,8);
         return 1;
 }
 
@@ -314,7 +313,7 @@ Uint16 sdoSegmentAck()
     EALLOW;     // EALLOW enables access to protected bits
     ECanaRegs.CANRMP.all = 0x00000002;
     EDIS;
-    canSendMailBox0(SDO_ACK,8);
+    canSendMailBox(SDO_ACK, 8, &ECanaMboxes.MBOX0, 0);
     return 0;
 }
 #ifdef RUN_FROM_RAM
@@ -336,7 +335,6 @@ Uint16 sdoSegmentGetData()
         return 0;
     }
     else
-      //  canSendMailBox0(SDO_ABORT,8);
         return 1;
 }
 
@@ -597,7 +595,7 @@ inline void communicationLock()
                     TxData[0]= 0x4F;
                     TxData[1]= 0x20;
                     TxData[4]=1;
-                    canSendMailBox0(&TxData[0],8); //Echo
+                    canSendMailBox(&TxData[0], 8, &ECanaMboxes.MBOX0, 0); //Echo
                     //set CAN get/Send pointers
                     //set get/Send pointers
                     GetOnlyWordData = getWordCanMailBox1Data;

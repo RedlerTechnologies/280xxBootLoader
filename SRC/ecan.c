@@ -11,7 +11,7 @@
 
 #include "DSP28x_Project.h"    // DSP28 Headerfile Include File
 #include "ecan.h"
-
+#include "F2806x_ECan.h"
 
 
 
@@ -279,7 +279,15 @@ void Ecan_set_tx_mailbox(Uint16 dev_id, Uint16 mbox_id, Uint32 MsgId, Uint16 ext
         ECanShadow.CANMD.all &= (~(1<<mbox_id));
         ECanaRegs.CANMD.all = ECanShadow.CANMD.all;
 
-        (&ECanaMboxes.MBOX0)[mbox_id].MSGID.all=msg_id.all;
+        switch(mbox_id){
+            case ECANA_FIRST_RX_MAILBOX:
+            default:
+                (&ECanaMboxes.MBOX0)[0].MSGID.all=msg_id.all;
+                break;
+            case ECANA_FIRST_RX_MAILBOX + 2:
+                (&ECanaMboxes.MBOX2)[0].MSGID.all=msg_id.all;
+                break;
+        }
 
         /*
         ** Enable mailbox
@@ -302,31 +310,38 @@ Uint16 bigEndian(Uint16 data1,Uint16 data2)
 }
 
 #ifdef RUN_FROM_RAM
-#pragma CODE_SECTION(canSendMailBox0, "ramfuncs");
+#pragma CODE_SECTION(canSendMailBox, "ramfuncs");
 #endif
-void canSendMailBox0(Uint16 data[],Uint16 length)
+void canSendMailBox(Uint16 data[],Uint16 length, volatile struct MBOX* MBOXn, int MailBox)
 {
-    ECanaMboxes.MBOX0.MSGCTRL.bit.DLC = length;
+    MBOXn->MSGCTRL.bit.DLC = length;
     switch(length)
     {
     case 8:
     case 7:
-        ECanaMboxes.MBOX0.MDH.word.LOW_WORD = bigEndian(data[6],data[7]);
+        MBOXn->MDH.word.LOW_WORD = bigEndian(data[6],data[7]);
     case 6:
     case 5:
-        ECanaMboxes.MBOX0.MDH.word.HI_WORD = bigEndian(data[4],data[5]) ;
+        MBOXn->MDH.word.HI_WORD = bigEndian(data[4],data[5]) ;
     case 4:
     case 3:
-        ECanaMboxes.MBOX0.MDL.word.LOW_WORD = bigEndian(data[2],data[3]);
+        MBOXn->MDL.word.LOW_WORD = bigEndian(data[2],data[3]);
     case 2:
     case 1:
-        ECanaMboxes.MBOX0.MDL.word.HI_WORD = bigEndian(data[0],data[1]);
+        MBOXn->MDL.word.HI_WORD = bigEndian(data[0],data[1]);
         break;
     default:
         return;
     }
-    ECanaRegs.CANTRS.all = (Uint32)BIT0;  // request a transmission for MailBox 0
-
+    switch(MailBox){
+        case 2:
+            ECanaRegs.CANTRS.all = (Uint32)BIT2;  // request a transmission for MailBox 2
+            break;
+        case 0:
+        default:
+            ECanaRegs.CANTRS.all = (Uint32)BIT0;  // request a transmission for MailBox 0
+            break;
+    }
 }
 
 

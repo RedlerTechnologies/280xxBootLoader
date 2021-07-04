@@ -127,6 +127,8 @@ Uint32 main(void)
 #ifdef CAN
 	Uint32 SDO_RX = 0x600;
 	Uint32 SDO_TX = 0x580;
+	Uint32 HB_COB_ID = 0x700;   // Heartbeat  COB-ID
+	Uint16 NMT_State[1] = { 0x7F };    // Pre-operational
 #define UNIT_ID_DFLT 127
 
 	Uint32* nodeIDptr =  (Uint32*)CAN_NODEID_FLASH;
@@ -135,6 +137,7 @@ Uint32 main(void)
 	    nodeID = UNIT_ID_DFLT;
 	SDO_RX += nodeID;
 	SDO_TX += nodeID;
+	HB_COB_ID += nodeID;
     Uint32* canBaudRateptr =  (Uint32*)CAN_BAUDRATE_FLASH;
 	SysCtrlRegs.PCLKCR0.bit.ECANAENCLK=1;   // eCAN-A
 	int baudRate = (*canBaudRateptr);
@@ -142,9 +145,14 @@ Uint32 main(void)
 	    InitECanA(SelectCANBaudRate((*canBaudRateptr)));
 	else
         InitECanA(SelectCANBaudRate(0));
+
 	Ecan_set_tx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX, SDO_TX, 0);
-	Ecan_set_rx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX+1, SDO_RX, 0xFFFFFFFF, 0); // NODEID = 0
+	Ecan_set_rx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX + 1, SDO_RX, 0xFFFFFFFF, 0); // NODEID = 0
 	circBufInit(txMem,sizeof(txMem));
+
+    Ecan_set_tx_mailbox(ECAN_A, ECANA_FIRST_RX_MAILBOX + 2, HB_COB_ID, 0);
+    canSendMailBox(&NMT_State[0], 1, &ECanaMboxes.MBOX2, 2); // Heartbeat
+
 #endif
 
     initTimersInterupt();
