@@ -26,7 +26,7 @@
 #ifdef BOARD_URAYON
 #define BOARD URAYON
 #else
-#define BOARD STXI_M1
+#define BOARD RAYON70
 #endif
 
 #define BOARD_HP
